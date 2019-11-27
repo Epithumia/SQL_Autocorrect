@@ -3,7 +3,8 @@ from setuptools import setup
 requires = [
     'prettytable',
     'sqlparse',
-    'moz_sql_parser'
+    'moz_sql_parser',
+    'sqlalchemy'
 ]
 
 tests_require = [
