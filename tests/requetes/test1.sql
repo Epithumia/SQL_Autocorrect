@@ -1,5 +1,5 @@
 SELECT AnneePublicationJeu, COUNT(DISTINCT J.NomJeu) AS "Noms uniques",
-       COUNT(*), COUNT(complexite)
+       COUNT(*), AVG(complexite)
 FROM Jeu J
 WHERE IdJeu > 100000
 OR IdJeu < 50000
