@@ -3,7 +3,7 @@ import unittest
 import sqlparse
 from moz_sql_parser import parse
 
-from sql_autocorrect.cli import parse_solutions, check_select
+from sql_autocorrect.cli import parse_solutions, check_select, check_tables
 
 
 class FunctionalTests(unittest.TestCase):
@@ -49,3 +49,27 @@ class FunctionalTests(unittest.TestCase):
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/select_solution.sql')
         self.assertTupleEqual(check_select(sql['select'], solutions), (0, 0, True, False))
+
+    def test_from_ok(self):
+        with open('tests/requetes/from_ok.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        solutions = parse_solutions('tests/requetes/from_solution.sql')
+        self.assertTupleEqual(check_tables(sql['from'], solutions), (0, 0))
+
+    def test_from_exces(self):
+        with open('tests/requetes/from_exces.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        solutions = parse_solutions('tests/requetes/from_solution.sql')
+        self.assertTupleEqual(check_tables(sql['from'], solutions), (1, 0))
+
+    def test_from_manque(self):
+        with open('tests/requetes/from_manque.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        solutions = parse_solutions('tests/requetes/from_solution.sql')
+        self.assertTupleEqual(check_tables(sql['from'], solutions), (0, 1))
