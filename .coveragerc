@@ -1,0 +1,7 @@
+[run]
+
+include =
+    sql_autocorrect/*
+
+[report]
+precision = 2

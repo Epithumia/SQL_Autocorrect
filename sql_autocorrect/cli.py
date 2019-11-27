@@ -1,5 +1,5 @@
 import argparse
-from itertools import islice
+from itertools import islice, filterfalse
 from pprint import pprint
 
 import sqlparse
@@ -8,6 +8,24 @@ from prettytable import PrettyTable
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
+
+
+def unique_everseen(iterable, key=None):
+    "List unique elements, preserving order. Remember all elements ever seen."
+    # unique_everseen('AAAABBBCCDAABBB') --> A B C D
+    # unique_everseen('ABBCcAD', str.lower) --> A B C D
+    seen = set()
+    seen_add = seen.add
+    if key is None:
+        for element in filterfalse(seen.__contains__, iterable):
+            seen_add(element)
+            yield element
+    else:
+        for element in iterable:
+            k = key(element)
+            if k not in seen:
+                seen_add(k)
+                yield element
 
 
 def parse_sql_rs(rs):
@@ -47,10 +65,6 @@ def check_alias_agregat(sql):
     for item in sql:
         for w in kw:
             if w in item['value'] and 'name' not in item:
-                # if 'distinct' not in item['value'][w]:
-                #    d = item['value'][w]
-                # else:
-                #    d = 'DISTINCT ' + item['value'][w]['distinct']
                 d = format({'select': item['value'][w]})[7:]
                 msg += w.upper() + '(' + d + ') : mettez un alias\n'
                 score = -0.25
@@ -58,8 +72,7 @@ def check_alias_agregat(sql):
 
 
 def check_tables(sql, solutions):
-    if not isinstance(solutions[0], list):
-        solutions = [solutions]
+    tables_solution = solutions['from']
     if not isinstance(sql, list):
         sql = [sql]
     manque = 9999
@@ -70,7 +83,7 @@ def check_tables(sql, solutions):
             prop.append(token['value'].upper())
         else:
             prop.append(token.upper())
-    for sol in solutions:
+    for sol in tables_solution:
         sol = sorted([x.upper() for x in sol])
         from collections import Counter
         c = list((Counter(sol) & Counter(prop)).elements())
@@ -80,15 +93,98 @@ def check_tables(sql, solutions):
     return exces, manque
 
 
-def parse_solutions():
-    pass
+def parse_solutions(fichier):
+    solutions = {}
+    with open(fichier, 'r') as f:
+        sol_sql = f.read()
+        solutions_sql = sqlparse.split(sol_sql)
+        solutions['from'] = []
+        solutions['select'] = []
+        solutions['where'] = []
+        solutions['groupby'] = []
+        solutions['having'] = []
+        solutions['orderby'] = []
+        for stmt in solutions_sql:
+            if stmt != '':
+                sql = parse(stmt)
+                sol_select = sql['select']
+                if not isinstance(sol_select, list):
+                    sol_select = [sol_select]
+                t = []
+                for col in sol_select:
+                    if isinstance(col, dict):
+                        t.append(col['value'])
+                    else:
+                        t.append(col)
+                if len(t):
+                    solutions['select'].append(t)
+                solutions['select'] = list(map(list, unique_everseen(map(tuple, solutions['select']), str)))
+                sol_from = sql['from']
+                if not isinstance(sol_from, list):
+                    sol_from = [sol_from]
+                t = []
+                for table in sol_from:
+                    if isinstance(table, dict):
+                        t.append(table['value'])
+                    else:
+                        t.append(table)
+                if len(t):
+                    solutions['from'].append(t)
+                solutions['from'] = list(map(list, unique_everseen(map(tuple, solutions['from']))))
+                if 'orderby' in sql.keys():
+                    sol_ob = sql['orderby']
+                    if not isinstance(sol_ob, list):
+                        sol_ob = [sol_ob]
+                    t = []
+                    for col in sol_ob:
+                        if isinstance(col, dict):
+                            t.append(col['value'])
+                        else:
+                            t.append(col)
+                    if len(t):
+                        solutions['orderby'].append(t)
+                    solutions['orderby'] = list(map(list, unique_everseen(map(tuple, solutions['orderby']), str)))
+                if 'groupby' in sql.keys():
+                    sol_gb = sql['groupby']
+                    if not isinstance(sol_gb, list):
+                        sol_gb = [sol_gb]
+                    t = []
+                    for col in sol_gb:
+                        if isinstance(col, dict):
+                            t.append(col['value'])
+                        else:
+                            t.append(col)
+                    if len(t):
+                        solutions['groupby'].append(t)
+                    solutions['groupby'] = list(map(list, unique_everseen(map(tuple, solutions['groupby']), str)))
+                if 'where' in sql.keys():
+                    sol_where = sql['where']
+                    if not isinstance(sol_where, list):
+                        sol_where = [sol_where]
+                    t = []
+                    for cond in sol_where:
+                        t.append(cond)
+                    if len(t):
+                        solutions['where'].append(t)
+                    solutions['where'] = list(map(list, unique_everseen(map(tuple, solutions['where']), str)))
+                if 'having' in sql.keys():
+                    sol_having = sql['having']
+                    if not isinstance(sol_having, list):
+                        sol_having = [sol_having]
+                    t = []
+                    for cond in sol_having:
+                        t.append(cond)
+                    if len(t):
+                        solutions['having'].append(t)
+                    solutions['having'] = list(map(list, unique_everseen(map(tuple, solutions['having']), str)))
+    return solutions
 
 
 def check_where(param, solutions):
     return 0, 0
 
 
-def check_ob(param, solutions):
+def check_ob(sql, solutions):
     return 0, 0
 
 
@@ -99,8 +195,37 @@ def check_gb(param, solutions):
 def check_having(param, solutions):
     return 0, 0
 
-def check_select(param, solutions):
-    return 0, 0, 0
+
+def check_select(sql_select, solutions):
+    if not isinstance(sql_select, list):
+        sql_select = [sql_select]
+    # SELECT * au lieu de colonnes précises
+    if sql_select[0] == '*' and '*' not in solutions['select']:
+        return 0, 0, False, True
+
+    # Excès et/ou manque
+    exces = 0
+    manque = 9999
+    prop = []
+    for token in sql_select:
+        if isinstance(token, dict):
+            prop.append(str(token['value']))
+        else:
+            prop.append(str(token))
+    for sol in solutions['select']:
+        sol = sorted([str(x) for x in sol])
+        from collections import Counter
+        c = list((Counter(sol) & Counter(prop)).elements())
+        manque = min(manque, len(sol) - len(c))
+        exces = max(exces, len(prop) - len(c))
+
+    # Désordre = toutes les colonnes mais pas dans le bon ordre
+    if all(len(sql_select) == len(x) for x in solutions['select']) and not any(
+            all(a['value'] == b for a, b in zip(sql_select, solutions['select'][i])) for i in
+            range(len(solutions['select']))):
+        return 0, 0, True, False
+    return exces, manque, False, False
+
 
 def parse_requete(args, solutions):
     import threading
@@ -119,22 +244,24 @@ def parse_requete(args, solutions):
         score = 0
 
         # TODO: Vérifier les colonnes du SELECT
-        exces_sel, manque_sel, desordre_sel = check_select(sql['select'], solutions)
+        exces_sel, manque_sel, desordre_sel, etoile = check_select(sql['select'], solutions)
         comm_select = ''
-        if exces_sel:
-            comm_select += 'Il y a ' + str(exces_sel) + ' colonne(s) en trop.\n'
-        if manque_sel:
-            comm_select += 'Il manque ' + str(manque_sel) + ' colonne(s).\n'
-        if desordre_sel:
-            comm_select += 'Les colonnes sont dans le désordre.'
-
+        if etoile:
+            comm_select = 'Il ne faut pas faire SELECT *, on veut des informations précises.'
+        else:
+            if exces_sel:
+                comm_select += 'Il y a ' + str(exces_sel) + ' colonne(s) en trop.\n'
+            if manque_sel:
+                comm_select += 'Il manque ' + str(manque_sel) + ' colonne(s).\n'
+            if desordre_sel:
+                comm_select += 'Les colonnes sont dans le désordre.'
 
         # Vérification des étiquettes dans le SELECT en cas de COUNT/SUM/AVG/MIN/MAX
         label, score_labels = check_alias_agregat(sql['select'])
         score += score_labels
 
         # Vérification des tables manquantes/en trop
-        exces, manque = check_tables(sql['from'], solutions['from'])
+        exces, manque = check_tables(sql['from'], solutions)
         score += -0.5 * exces - manque
         if exces and not manque:
             comm_tables = "Il y a " + str(exces) + " table(s) en trop."
@@ -161,8 +288,11 @@ def parse_requete(args, solutions):
 
         # TODO: Vérification des colonnes dans le ORDER BY
         comm_ob = ''
-        if 'order by' in sql.keys():
-            desordre_ob, manque_ob = check_ob(sql['order by'], solutions)
+        if min([len(x) for x in solutions['orderby']]) and 'orderby' not in sql.keys():
+            comm_ob = "Le ORDER BY est manquant"
+            score -= 1
+        if 'orderby' in sql.keys():
+            desordre_ob, manque_ob = check_ob(sql['orderby'], solutions)
             if desordre_ob and not manque_ob:
                 comm_ob = "Les colonnes du ORDER BY sont dans le désordre."
             elif manque_ob and not desordre_ob:
@@ -175,8 +305,8 @@ def parse_requete(args, solutions):
 
         # TODO: Vérification des colonnes dans le GROUP BY
         comm_gb = ''
-        if 'group by' in sql.keys():
-            desordre_gb, manque_gb = check_gb(sql['group by'], solutions)
+        if 'groupby' in sql.keys():
+            desordre_gb, manque_gb = check_gb(sql['groupby'], solutions)
 
         # TODO: Vérification des conditions dans le HAVING
         comm_having = ''
@@ -223,6 +353,8 @@ def main():
     parser = argparse.ArgumentParser(prog='sql_parser')
     parser.add_argument("-f", type=str, required=True,
                         help="Fichier à analyser", metavar='FICHIER')
+    parser.add_argument("-s", type=str, required=True,
+                        help="Fichier de solution(s)", metavar='FICHIER')
     parser.add_argument('-db', type=str, required=True,
                         help="Base sur laquelle exécuter la requête", metavar='BDD')
     parser.add_argument('-g', default=False, action='store_true',
@@ -232,9 +364,8 @@ def main():
     parser.add_argument('-res', default=False, action="store_true",
                         help="Affiche le résultat de la requête")
     args = parser.parse_args()
-    #solutions = parse_solutions()
-    solutions = {}
-    solutions['from'] = [['Jeu', 'Personne'], ['jeu']]
+    solutions = parse_solutions(args.s)
+    pprint(solutions)
     parse_requete(args, solutions)
 
 
