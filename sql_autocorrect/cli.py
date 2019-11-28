@@ -104,9 +104,11 @@ def parse_solutions(fichier):
         solutions['groupby'] = []
         solutions['having'] = []
         solutions['orderby'] = []
+        solutions['requete'] = []
         for stmt in solutions_sql:
             if stmt != '':
                 sql = parse(stmt)
+                solutions['requete'].append(sql)
                 sol_select = sql['select']
                 if not isinstance(sol_select, list):
                     sol_select = [sol_select]
@@ -188,8 +190,60 @@ def check_ob(sql, solutions):
     return 0, 0
 
 
-def check_gb(param, solutions):
-    return 0, 0
+def check_gb(sql, solutions):
+    agregats = ['count', 'sum', 'avg', 'min', 'max']
+    if not isinstance(solutions['requete'], list):
+        solutions = [solutions['requete']]
+    else:
+        solutions = solutions['requete']
+    if not isinstance(sql['select'], list):
+        sql_select = [sql['select']]
+    else:
+        sql_select = sql['select']
+    if not (any('groupby' in sol.keys() and len(sol['groupby']) for sol in solutions)):
+        # Pas de GB dans les solutions
+        if 'groupby' in sql.keys():
+            # GROUP BY inutile
+            return 0, 0, True
+        else:
+            return 0, 0, False
+    if all('groupby' in sol.keys() and len(sol['groupby']) for sol in solutions):
+        # Forcément GB dans la solution
+        if 'groupby' not in sql.keys():
+            manque = min(len(sol['groupby']) for sol in solutions)
+            return 0, manque, False
+        else:
+            exces = 0
+            manque = 9999
+            if not isinstance(sql['groupby'], list):
+                sql_gb = [sql['groupby']]
+            else:
+                sql_gb = sql['groupby']
+            prop_gb = []
+            for token in sql_gb:
+                if isinstance(token, dict):
+                    prop_gb.append(str(token['value'].split('.')[-1]))
+                else:
+                    prop_gb.append(str(token))
+            for sol in solutions:
+                sol_s = sorted([str(x['value'].split('.')[-1]) for x in sol['groupby'] if sol])
+                from collections import Counter
+                c = list((Counter(sol_s) & Counter(prop_gb)).elements())
+                manque = min(manque, len(sol_s) - len(c))
+                exces = max(exces, len(prop_gb) - len(c))
+            if manque:
+                prop_select = []
+                for token in sql_select:
+                    if isinstance(token, dict):
+                        if not any(isinstance(token['value'], dict) and ag in token['value'].keys() for ag in agregats):
+                            prop_select.append(str(token['value']))
+                    else:
+                        prop_select.append(str(token))
+                if all(token in prop_gb for token in prop_select):
+                    manque = manque / 2.0
+            return exces, manque, False
+
+    return 0, 0, False
 
 
 def check_having(param, solutions):
@@ -243,7 +297,6 @@ def parse_requete(args, solutions):
         pprint(sql)
         score = 0
 
-        # TODO: Vérifier les colonnes du SELECT
         exces_sel, manque_sel, desordre_sel, etoile = check_select(sql['select'], solutions)
         comm_select = ''
         if etoile:
@@ -288,10 +341,11 @@ def parse_requete(args, solutions):
 
         # TODO: Vérification des colonnes dans le ORDER BY
         comm_ob = ''
-        if min([len(x) for x in solutions['orderby']]) and 'orderby' not in sql.keys():
+        score_ob = min([len(x) for x in solutions['orderby']])
+        if score_ob and 'orderby' not in sql.keys():
             comm_ob = "Le ORDER BY est manquant"
-            score -= 1
-        if 'orderby' in sql.keys():
+            score -= min(score_ob * 0.5, 1)
+        elif 'orderby' in sql.keys():
             desordre_ob, manque_ob = check_ob(sql['orderby'], solutions)
             if desordre_ob and not manque_ob:
                 comm_ob = "Les colonnes du ORDER BY sont dans le désordre."
@@ -305,8 +359,12 @@ def parse_requete(args, solutions):
 
         # TODO: Vérification des colonnes dans le GROUP BY
         comm_gb = ''
-        if 'groupby' in sql.keys():
-            desordre_gb, manque_gb = check_gb(sql['groupby'], solutions)
+        score_gb = min([len(x) for x in solutions['orderby']])
+        if score_gb and 'groupby' not in sql.keys():
+            comm_ob = "Le GROUP BY est manquant"
+            score -= score_gb
+        elif 'groupby' in sql.keys():
+            exces_gb, manque_gb = check_gb(sql['groupby'], solutions)
 
         # TODO: Vérification des conditions dans le HAVING
         comm_having = ''
