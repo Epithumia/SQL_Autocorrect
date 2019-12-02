@@ -204,46 +204,80 @@ def check_gb(sql, solutions):
         # Pas de GB dans les solutions
         if 'groupby' in sql.keys():
             # GROUP BY inutile
-            return 0, 0, True
+            return 0, 0, True, False
         else:
-            return 0, 0, False
+            return 0, 0, False, False
     if all('groupby' in sol.keys() and len(sol['groupby']) for sol in solutions):
         # Forcément GB dans la solution
         if 'groupby' not in sql.keys():
             manque = min(len(sol['groupby']) for sol in solutions)
-            return 0, manque, False
+            return 0, manque, False, False
         else:
-            exces = 0
-            manque = 9999
-            if not isinstance(sql['groupby'], list):
-                sql_gb = [sql['groupby']]
-            else:
-                sql_gb = sql['groupby']
-            prop_gb = []
-            for token in sql_gb:
-                if isinstance(token, dict):
-                    prop_gb.append(str(token['value'].split('.')[-1]))
-                else:
-                    prop_gb.append(str(token))
-            for sol in solutions:
-                sol_s = sorted([str(x['value'].split('.')[-1]) for x in sol['groupby'] if sol])
-                from collections import Counter
-                c = list((Counter(sol_s) & Counter(prop_gb)).elements())
-                manque = min(manque, len(sol_s) - len(c))
-                exces = max(exces, len(prop_gb) - len(c))
-            if manque:
-                prop_select = []
-                for token in sql_select:
-                    if isinstance(token, dict):
-                        if not any(isinstance(token['value'], dict) and ag in token['value'].keys() for ag in agregats):
-                            prop_select.append(str(token['value']))
-                    else:
-                        prop_select.append(str(token))
-                if all(token in prop_gb for token in prop_select):
-                    manque = manque / 2.0
-            return exces, manque, False
+            return exces_manque_gb(agregats, solutions, sql, sql_select)
+    # Troisième branche : il y a une/+ solution avec et une/+ sans
+    # Sous-cas #1 : pas de group by dans la proposition
+    ag_select = []
+    for token in sql_select:
+        if isinstance(token, dict) and any(
+                isinstance(token['value'], dict) and ag in token['value'].keys() for ag in agregats):
+            ag_select.append(token)
+    if 'groupby' not in sql.keys():
+        # -- Si pas d'agrégat dans le select et pas de having  => return 0, 0, False
+        if len(ag_select) == 0 and 'having' not in sql.keys():
+            return 0, 0, False, False
+        # -- Si pas d'agrégat dans le select mais having present : return 0, 0, False (sera analyse par check_having)
+        if len(ag_select) == 0 and 'having' in sql.keys():
+            return 0, 0, False, False
+        # -- Si agrégat dans le select => manque N => return 0, N, False, False
+        manque = 9999
+        for sol in solutions:
+            if 'groupby' in sol.keys():
+                manque = min(manque, len(sol['groupby']))
+        return 0, manque, False, False
+    else:
+        # Sous-cas #2 :
+        # -- group by sans agrégat => (0, 0, False, True)
+        if len(ag_select) == 0 and 'having' not in sql.keys():
+            return 0, 0, True, False
+        # -- group by dans la proposition => comparer avec solutions à group by => exces/manque/ok
+        solutions_gb = []
+        for sol in solutions:
+            if 'groupby' in sol.keys() and len(sol['groupby']):
+                solutions_gb.append(sol)
+        return exces_manque_gb(agregats, solutions_gb, sql, sql_select)
 
-    return 0, 0, False
+
+def exces_manque_gb(agregats, solutions, sql, sql_select):
+    exces = 0
+    manque = 9999
+    if not isinstance(sql['groupby'], list):
+        sql_gb = [sql['groupby']]
+    else:
+        sql_gb = sql['groupby']
+    prop_gb = []
+    for token in sql_gb:
+        if isinstance(token, dict):
+            prop_gb.append(str(token['value'].split('.')[-1]))
+        else:
+            prop_gb.append(str(token))
+    for sol in solutions:
+        sol_s = sorted([str(x['value'].split('.')[-1]) for x in sol['groupby'] if sol])
+        from collections import Counter
+        c = list((Counter(sol_s) & Counter(prop_gb)).elements())
+        manque = min(manque, len(sol_s) - len(c))
+        exces = max(exces, len(prop_gb) - len(c))
+    if manque:
+        prop_select = []
+        for token in sql_select:
+            if isinstance(token, dict):
+                if not any(isinstance(token['value'], dict) and ag in token['value'].keys() for ag in agregats):
+                    prop_select.append(str(token['value']))
+            else:
+                prop_select.append(str(token))
+        if all(token in prop_gb for token in prop_select):
+            # Il manque probablement juste un identifiant dans le GB pour couvrir contre les homonymes
+            manque = manque / 2.0
+    return exces, manque, False, False
 
 
 def check_having(param, solutions):
