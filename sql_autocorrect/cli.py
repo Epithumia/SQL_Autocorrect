@@ -52,23 +52,21 @@ def check_alias_agregat(sql):
     msg = ''
     score = 0
     kw = ['count', 'sum', 'avg', 'min', 'max']
-    if not isinstance(sql, list):
+    sql_select = sql['select']
+    if not isinstance(sql_select, list):
         for w in kw:
-            if w in sql['value'] and 'name' not in sql:
-                if 'distinct' not in sql['value'][w]:
-                    d = sql['value'][w]
-                else:
-                    d = 'DISTINCT ' + sql['value'][w]['distinct']
+            if w in sql_select['value'] and 'name' not in sql_select:
+                d = format({'select': sql_select['value'][w]})[7:]
                 msg = w.upper() + '(' + d + ') : mettez un alias\n'
                 score = -0.25
-        return msg, score
-    for item in sql:
+        return msg.rstrip(), score
+    for item in sql_select:
         for w in kw:
             if w in item['value'] and 'name' not in item:
                 d = format({'select': item['value'][w]})[7:]
                 msg += w.upper() + '(' + d + ') : mettez un alias\n'
                 score = -0.25
-    return msg, score
+    return msg.rstrip(), score
 
 
 def check_tables(sql, solutions):
