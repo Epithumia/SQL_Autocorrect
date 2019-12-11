@@ -1,6 +1,6 @@
 import argparse
+import sys
 from itertools import islice, filterfalse
-from pprint import pprint
 
 import sqlparse
 from moz_sql_parser import parse, format
@@ -70,13 +70,14 @@ def check_alias_agregat(sql):
 
 
 def check_tables(sql, solutions):
+    sql_from = sql['from']
     tables_solution = solutions['from']
-    if not isinstance(sql, list):
-        sql = [sql]
+    if not isinstance(sql_from, list):
+        sql_from = [sql_from]
     manque = 9999
     exces = 0
     prop = []
-    for token in sql:
+    for token in sql_from:
         if isinstance(token, dict):
             prop.append(token['value'].upper())
         else:
@@ -186,7 +187,7 @@ def check_where(sql, solutions):
 
 def check_alias_table(sql):
     sql_from = sql['from']
-    print(sql_from)
+    # print(sql_from)
     liste_noms = []
     liste_alias = []
     for token in sql_from:
@@ -219,7 +220,10 @@ def check_ob(sql, solutions):
         if len(solutions_ob) == 0:
             cr_flag = True
         if 'orderby' in sol.keys():
-            for token in sol['orderby']:
+            sol_ob = sol['orderby']
+            if not isinstance(sol['orderby'], list):
+                sol_ob = [sol['orderby']]
+            for token in sol_ob:
                 if cr_flag:
                     solutions_ob.append(set())
                 if isinstance(token['value'], dict):
@@ -231,6 +235,8 @@ def check_ob(sql, solutions):
                     # Dans ce cas, cela pourrait être un alias, on cherche dans la solution courante
                     # la formule cachée et on la stocke à la place
                     sel = solutions['requete'][s]['select']
+                    if not isinstance(sel, list):
+                        sel = [sel]
                     for col in sel:
                         c = col.get('name', col['value'])
                         if c == token['value']:
@@ -239,7 +245,7 @@ def check_ob(sql, solutions):
                 i += 1
         s += 1
     if 'orderby' not in sql:
-        return 0, len(solutions_ob), 0
+        return 0, len(solutions_ob), 0, False
     prop_ob = []
     for token in sql['orderby']:
         if isinstance(token['value'], dict):
@@ -259,6 +265,7 @@ def check_ob(sql, solutions):
     exces = 0  # max(len(prop_ob) - len(solutions_ob), 0)
     manque = 0  # max(len(prop_ob) - len(solutions_ob), 0)
     sorts = 0
+    desordre = False
     # On va créer des listes :
     # - les colonnes présentes indépendamment de l'ordre et du tri => manque +x
     liste_col_ob_sol = []
@@ -289,7 +296,14 @@ def check_ob(sql, solutions):
         for entry in liste_col_ob_sol_sort:
             if col in entry.keys() and sort != entry[col]:
                 sorts += 1
-    return exces, manque, sorts
+    if exces == 0 and manque == 0:
+        for i in range(len(prop_ob)):
+            col, _ = prop_ob[i]
+            col = col.upper()
+            sols = [sol[0].upper() for sol in solutions_ob[i]]
+            if col not in sols:
+                desordre = True
+    return exces, manque, sorts, desordre
 
 
 def check_gb(sql, solutions):
@@ -306,14 +320,14 @@ def check_gb(sql, solutions):
         # Pas de GB dans les solutions
         if 'groupby' in sql.keys():
             # GROUP BY inutile
-            return 0, 0, True, False
+            return 0, 0, True
         else:
-            return 0, 0, False, False
+            return 0, 0, False
     if all('groupby' in sol.keys() and len(sol['groupby']) for sol in solutions):
         # Forcément GB dans la solution
         if 'groupby' not in sql.keys():
             manque = min(len(sol['groupby']) for sol in solutions)
-            return 0, manque, False, False
+            return 0, manque, False
         else:
             return exces_manque_gb(agregats, solutions, sql, sql_select)
     # Troisième branche : il y a une/+ solution avec et une/+ sans
@@ -326,21 +340,21 @@ def check_gb(sql, solutions):
     if 'groupby' not in sql.keys():
         # -- Si pas d'agrégat dans le select et pas de having  => return 0, 0, False
         if len(ag_select) == 0 and 'having' not in sql.keys():
-            return 0, 0, False, False
+            return 0, 0, False
         # -- Si pas d'agrégat dans le select mais having present : return 0, 0, False (sera analyse par check_having)
         if len(ag_select) == 0 and 'having' in sql.keys():
-            return 0, 0, False, False
+            return 0, 0, False
         # -- Si agrégat dans le select => manque N => return 0, N, False, False
         manque = 9999
         for sol in solutions:
             if 'groupby' in sol.keys():
                 manque = min(manque, len(sol['groupby']))
-        return 0, manque, False, False
+        return 0, manque, False
     else:
         # Sous-cas #2 :
         # -- group by sans agrégat => (0, 0, False, True)
         if len(ag_select) == 0 and 'having' not in sql.keys():
-            return 0, 0, True, False
+            return 0, 0, True
         # -- group by dans la proposition => comparer avec solutions à group by => exces/manque/ok
         solutions_gb = []
         for sol in solutions:
@@ -363,7 +377,11 @@ def exces_manque_gb(agregats, solutions, sql, sql_select):
         else:
             prop_gb.append(str(token))
     for sol in solutions:
-        sol_s = sorted([str(x['value'].split('.')[-1]) for x in sol['groupby'] if sol])
+        if not isinstance(sol['groupby'], list):
+            sol_gb = [sol['groupby']]
+        else:
+            sol_gb = sol['groupby']
+        sol_s = sorted([str(x['value'].split('.')[-1]) for x in sol_gb if sol])
         from collections import Counter
         c = list((Counter(sol_s) & Counter(prop_gb)).elements())
         manque = min(manque, len(sol_s) - len(c))
@@ -379,14 +397,32 @@ def exces_manque_gb(agregats, solutions, sql, sql_select):
         if all(token in prop_gb for token in prop_select):
             # Il manque probablement juste un identifiant dans le GB pour couvrir contre les homonymes
             manque = manque / 2.0
-    return exces, manque, False, False
+    return exces, manque, False
 
 
 def check_having(sql, solutions):
-    return 0, 0
+    exces = manque = 0
+    sols = solutions
+    if not isinstance(solutions, list):
+        sols = [solutions]
+    if 'having' in sql.keys() and 'groupby' not in sql.keys():
+        return exces, manque, True, False
+    if all(('having' in sol.keys() and len(sol['having'])) for sol in sols) and 'having' not in sql.keys():
+        min_having = 9999
+        for sol in sols:
+            s = sol['having']
+            if not isinstance(sol['having'], list):
+                s = [sol['having']]
+            min_having = min(min_having, len(s))
+        manque = min_having
+        return exces, manque, False, False
+    if not any('having' in sol.keys() and len(sol['having']) for sol in sols) and 'having' in sql.keys():
+        return exces, manque, False, True
+    return exces, manque, False, False
 
 
-def check_select(sql_select, solutions):
+def check_select(sql, solutions):
+    sql_select = sql['select']
     if not isinstance(sql_select, list):
         sql_select = [sql_select]
     # SELECT * au lieu de colonnes précises
@@ -430,10 +466,10 @@ def parse_requete(args, solutions):
         stmt = r.read()
         stmt = sqlparse.split(stmt)[0]
         sql = parse(stmt)
-        pprint(sql)
+        # pprint(sql)
         score = 0
 
-        exces_sel, manque_sel, desordre_sel, etoile = check_select(sql['select'], solutions)
+        exces_sel, manque_sel, desordre_sel, etoile = check_select(sql, solutions)
         comm_select = ''
         if etoile:
             comm_select = 'Il ne faut pas faire SELECT *, on veut des informations précises.'
@@ -446,11 +482,11 @@ def parse_requete(args, solutions):
                 comm_select += 'Les colonnes sont dans le désordre.'
 
         # Vérification des étiquettes dans le SELECT en cas de COUNT/SUM/AVG/MIN/MAX
-        label, score_labels = check_alias_agregat(sql['select'])
+        label, score_labels = check_alias_agregat(sql)
         score += score_labels
 
         # Vérification des tables manquantes/en trop
-        exces, manque = check_tables(sql['from'], solutions)
+        exces, manque = check_tables(sql, solutions)
         score += -0.5 * exces - manque
         if exces and not manque:
             comm_tables = "Il y a " + str(exces) + " table(s) en trop."
@@ -461,10 +497,15 @@ def parse_requete(args, solutions):
         else:
             comm_tables = ''
 
+        if check_alias_table(sql) and comm_tables != '':
+            comm_tables += "Il y a soit deux fois la même table sans alis, ou deux fois le même alias"
+        elif check_alias_table(sql):
+            comm_tables = "Il y a soit deux fois la même table sans alis, ou deux fois le même alias"
+
         # TODO: Vérification des conditions dans le WHERE
         comm_where = ''
         if 'where' in sql.keys():
-            exces_w, manque_w = check_where(sql['where'], solutions)
+            exces_w, manque_w = check_where(sql, solutions)
             if exces_w and not manque_w:
                 comm_where = "Il y a " + str(exces_w) + " contrainte(s) en trop."
             elif manque_w and not exces_w:
@@ -477,35 +518,46 @@ def parse_requete(args, solutions):
 
         # TODO: Vérification des colonnes dans le ORDER BY
         comm_ob = ''
+        exces_ob, manque_ob, sort_ob, desordre_ob = check_ob(sql, solutions)
         score_ob = min([len(x) for x in solutions['orderby']])
-        if score_ob and 'orderby' not in sql.keys():
-            comm_ob = "Le ORDER BY est manquant"
+        if manque_ob == score_ob and 'orderby' not in sql.keys():
+            comm_ob = "Le ORDER BY est manquant\n"
             score -= min(score_ob * 0.5, 1)
-        elif 'orderby' in sql.keys():
-            desordre_ob, manque_ob = check_ob(sql['orderby'], solutions)
-            if desordre_ob and not manque_ob:
-                comm_ob = "Les colonnes du ORDER BY sont dans le désordre."
-            elif manque_ob and not desordre_ob:
-                comm_ob = "Il y a " + str(manque_ob) + " critère(s) de tri manquant(s)."
-            elif manque_ob and desordre_ob:
-                comm_ob = "Les colonnes du ORDER BY sont dans le désordre et il y a " + str(
-                    manque_ob) + " critère(s) de tri manquant(s)."
-            else:
-                comm_ob = ''
+        else:
+            malus_ob = 0
+            if exces_ob:
+                comm_ob += "Il y a " + str(exces_ob) + " colonne(s) en trop dans le ORDER BY.\n"
+                malus_ob += exces_ob * 0.25
+            if manque_ob:
+                comm_ob += "Il manque " + str(manque_ob) + " colonne(s) dans le ORDER BY.\n"
+                malus_ob += manque_ob * 0.5
+            if sort_ob:
+                comm_ob += str(sort_ob) + " colonne(s) mal triées dans le ORDER BY.\n"
+                malus_ob += sort_ob * 0.25
+            if desordre_ob:
+                comm_ob += "Les colonnes du ORDER BY ne sont pas dans le bon ordre."
+                malus_ob += 0.25
+            malus_ob = max(malus_ob, 1)
+            score -= malus_ob
 
         # TODO: Vérification des colonnes dans le GROUP BY
+        print(check_gb(sql, solutions))
         comm_gb = ''
-        score_gb = min([len(x) for x in solutions['orderby']])
-        if score_gb and 'groupby' not in sql.keys():
-            comm_ob = "Le GROUP BY est manquant"
-            score -= score_gb
-        elif 'groupby' in sql.keys():
-            exces_gb, manque_gb = check_gb(sql['groupby'], solutions)
 
         # TODO: Vérification des conditions dans le HAVING
         comm_having = ''
-        if 'having' in sql.keys():
-            exces_having, manque_having = check_having(sql['having'], solutions)
+        exces_having, manque_having, having_sans_gb, having_inutile = check_having(sql, solutions)
+        if having_sans_gb:
+            comm_having = "Erreur : HAVING sans GROUP BY"
+        elif exces_having:
+            comm_having = "Il y a " + str(exces_having) + " condition(s) en trop dans le HAVING"
+            score -= 0.5 * exces_having
+        elif manque_having:
+            comm_having = "Il y a " + str(manque_having) + " condition(s) manquantes dans le HAVING"
+            score -= 1 * exces_having
+        elif having_inutile:
+            comm_having = "Le HAVING est inutile"
+            score -= 1
 
         # Affichage des commentaires
         if args.c:
@@ -513,11 +565,11 @@ def parse_requete(args, solutions):
                 print("Commentaires sur la requête :")
                 print(comm_select.rstrip()) if comm_select else None
                 print(label.strip())
-                print(comm_tables) if comm_tables else None
-                print(comm_where) if comm_where else None
-                print(comm_gb) if comm_gb else None
-                print(comm_having) if comm_having else None
-                print(comm_ob) if comm_ob else None
+                print(comm_tables.strip()) if comm_tables else None
+                print(comm_where.strip()) if comm_where else None
+                print(comm_gb.strip()) if comm_gb else None
+                print(comm_having.strip()) if comm_having else None
+                print(comm_ob.strip()) if comm_ob else None
             else:
                 print("Pas de remarques")
 
@@ -543,7 +595,7 @@ def parse_requete(args, solutions):
         t.cancel()
 
 
-def main():
+def parse_args(args):
     parser = argparse.ArgumentParser(prog='sql_parser')
     parser.add_argument("-f", type=str, required=True,
                         help="Fichier à analyser", metavar='FICHIER')
@@ -557,9 +609,13 @@ def main():
                         help="Mode commentaire (défaut : oui)")
     parser.add_argument('-res', default=False, action="store_true",
                         help="Affiche le résultat de la requête")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
+    return args
+
+
+def main():
+    args = parse_args(sys.argv[1:])
     solutions = parse_solutions(args.s)
-    pprint(solutions)
     parse_requete(args, solutions)
 
 

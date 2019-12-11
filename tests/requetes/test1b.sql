@@ -4,5 +4,4 @@ FROM Jeu J, DependanceLangage
 WHERE IdJeu > 100000
 OR IdJeu < 50000
 GROUP BY AnneePublicationJeu
-HAVING AVG(Complexite) >= 2.5
-ORDER BY AnneePublicationJeu, "Noms uniques";
+HAVING AVG(Complexite) >= 2.5;
