@@ -438,21 +438,24 @@ def check_select(sql, solutions):
     prop = []
     for token in sql_select:
         if isinstance(token, dict):
-            prop.append(str(token['value']))
+            prop.append(str(token['value']).split('.')[-1])
         else:
             prop.append(str(token))
     for sol in solutions['select']:
-        sol = sorted([str(x) for x in sol])
+        sol = sorted([str(x).split('.')[-1] for x in sol])
         from collections import Counter
         c = list((Counter(sol) & Counter(prop)).elements())
         manque = min(manque, len(sol) - len(c))
         exces = max(exces, len(prop) - len(c))
 
     # Désordre = toutes les colonnes mais pas dans le bon ordre
-    if all(len(sql_select) == len(x) for x in solutions['select']) and not any(
-            all(a['value'] == b for a, b in zip(sql_select, solutions['select'][i])) for i in
-            range(len(solutions['select']))):
-        return 0, 0, True, False
+    if not manque and not exces:
+        desordre = True
+        for sol in solutions['select']:
+            sol = [str(x).split('.')[-1] for x in sol]
+            if desordre and len(sol) == len(prop) and all(sol[i] == prop[i] for i in range(len(sol))):
+                desordre = False
+        return 0, 0, desordre, False
     return exces, manque, False, False
 
 
@@ -501,9 +504,9 @@ def parse_requete(args, solutions):
             comm_tables = ''
 
         if check_alias_table(sql) and comm_tables != '':
-            comm_tables += "Il y a soit deux fois la même table sans alis, ou deux fois le même alias"
+            comm_tables += "Il y a soit deux fois la même table sans alias, ou deux fois le même alias"
         elif check_alias_table(sql):
-            comm_tables = "Il y a soit deux fois la même table sans alis, ou deux fois le même alias"
+            comm_tables = "Il y a soit deux fois la même table sans alias, ou deux fois le même alias"
 
         # TODO: Vérification des conditions dans le WHERE
         comm_where = ''
@@ -540,7 +543,8 @@ def parse_requete(args, solutions):
             if desordre_ob:
                 comm_ob += "Les colonnes du ORDER BY ne sont pas dans le bon ordre."
                 malus_ob += 0.25
-            malus_ob = max(malus_ob, 1)
+            if malus_ob:
+                malus_ob = max(malus_ob, 1)
             score -= malus_ob
 
         # TODO: Vérification des colonnes dans le GROUP BY
@@ -576,7 +580,7 @@ def parse_requete(args, solutions):
             if score < 0:
                 print("Commentaires sur la requête :")
                 print(comm_select.rstrip()) if comm_select else None
-                print(label.strip())
+                print(label.strip()) if label else None
                 print(comm_tables.strip()) if comm_tables else None
                 print(comm_where.strip()) if comm_where else None
                 print(comm_gb.strip()) if comm_gb else None

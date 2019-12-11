@@ -1,5 +1,8 @@
-SELECT nomJeu
-FROM Jeu J, DependanceLangage DL
-WHERE J.IdDepLang = DL.IdDependance
-AND DL.LibelleDependance like '%vote%'
-ORDER BY AnneePublicationJeu;
+SELECT Jeu.IdJeu, NomJeu
+FROM Jeu, Categorie, Propriete
+WHERE Jeu.IdJeu = Categorie.IdJeu
+AND Categorie.IdCategorie = Propriete.IdPropriete
+AND NomPropriete = 'Exploration'
+AND NoteMoyenne>=8
+AND Rang > 0
+ORDER BY Rang;
