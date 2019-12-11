@@ -247,7 +247,10 @@ def check_ob(sql, solutions):
     if 'orderby' not in sql:
         return 0, len(solutions_ob), 0, False
     prop_ob = []
-    for token in sql['orderby']:
+    sql_ob = sql['orderby']
+    if not isinstance(sql_ob, list):
+        sql_ob = [sql_ob]
+    for token in sql_ob:
         if isinstance(token['value'], dict):
             token_val = str(token['value'])
         elif '.' in token['value']:

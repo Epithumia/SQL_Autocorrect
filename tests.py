@@ -247,6 +247,14 @@ class FunctionalTests(unittest.TestCase):
         solutions = parse_solutions('tests/requetes/orderby_solution.sql')
         self.assertEqual(check_ob(sql, solutions), (0, 5, 0, False))
 
+    def test_orderby_manque_4(self):
+        with open('tests/requetes/orderby_manque_4.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        solutions = parse_solutions('tests/requetes/orderby_solution.sql')
+        self.assertEqual(check_ob(sql, solutions), (0, 4, 0, False))
+
     def test_orderby_err_mixte(self):
         with open('tests/requetes/orderby_err_mixte.sql', 'r') as r:
             stmt = r.read()
