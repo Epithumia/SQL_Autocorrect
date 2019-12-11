@@ -596,7 +596,7 @@ def parse_requete(args, solutions):
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(prog='sql_parser')
+    parser = argparse.ArgumentParser(prog='sql-autocorrect')
     parser.add_argument("-f", type=str, required=True,
                         help="Fichier à analyser", metavar='FICHIER')
     parser.add_argument("-s", type=str, required=True,
