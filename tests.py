@@ -3,7 +3,7 @@ import unittest
 import sqlparse
 from moz_sql_parser import parse
 
-from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat
+from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, check_ob
 
 
 class FunctionalTests(unittest.TestCase):
@@ -229,3 +229,27 @@ class FunctionalTests(unittest.TestCase):
             sql = parse(stmt)
         self.assertTupleEqual(check_alias_agregat(sql), (
         "COUNT(*) : mettez un alias\nCOUNT(DISTINCT(NbNotesUtilisateurs)) : mettez un alias", -0.25))
+
+    def test_orderby_ok(self):
+        with open('tests/requetes/orderby_ok_alias.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        solutions = parse_solutions('tests/requetes/orderby_solution.sql')
+        self.assertEqual(check_ob(sql, solutions), (0, 0, 0))
+
+    def test_orderby_manque(self):
+        with open('tests/requetes/orderby_manque.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        solutions = parse_solutions('tests/requetes/orderby_solution.sql')
+        self.assertEqual(check_ob(sql, solutions), (0, 5, 0))
+
+    def test_orderby_err_mixte(self):
+        with open('tests/requetes/orderby_err_mixte.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        solutions = parse_solutions('tests/requetes/orderby_solution.sql')
+        self.assertEqual(check_ob(sql, solutions), (1, 2, 2))

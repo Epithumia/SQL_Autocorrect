@@ -184,8 +184,95 @@ def check_where(param, solutions):
     return 0, 0
 
 
+def check_alias_table(sql, solutions):
+    # Vérifier qu'il n'y a pas deux fois la même table sans alias
+    # Vérifier qu'il n'y a pas deux fois le même alias
+    pass
+
+
 def check_ob(sql, solutions):
-    return 0, 0
+    # Comparer avec la solution
+    # -- colonne doit être soit un dans le SELECT (colonne, calcul ou alias)(, soit dans le GROUP BY, soit un index).
+    # -- vérifier si dans une des solutions (construire variantes orthogonales)
+    solutions_ob = []
+    s = 0
+    for sol in solutions['requete']:
+        cr_flag = False
+        i = 0
+        if len(solutions_ob) == 0:
+            cr_flag = True
+        if 'orderby' in sol.keys():
+            for token in sol['orderby']:
+                if cr_flag:
+                    solutions_ob.append(set())
+                if isinstance(token['value'], dict):
+                    token_val = str(token['value'])
+                elif '.' in token['value']:
+                    token_val = token['value'].split('.')[1]
+                else:
+                    token_val = token['value']
+                    # Dans ce cas, cela pourrait être un alias, on cherche dans la solution courante
+                    # la formule cachée et on la stocke à la place
+                    sel = solutions['requete'][s]['select']
+                    for col in sel:
+                        c = col.get('name', col['value'])
+                        if c == token['value']:
+                            token_val = str(col['value'])
+                solutions_ob[i].add((token_val, token.get('sort', 'asc')))
+                i += 1
+        s += 1
+    if 'orderby' not in sql:
+        return 0, len(solutions_ob), 0
+    prop_ob = []
+    for token in sql['orderby']:
+        if isinstance(token['value'], dict):
+            token_val = str(token['value'])
+        elif '.' in token['value']:
+            token_val = token['value'].split('.')[1]
+        else:
+            token_val = token['value']
+            # Dans ce cas, cela pourrait être un alias, on cherche dans la solution courante
+            # la formule cachée et on la stocke à la place
+            sel = sql['select']
+            for col in sel:
+                c = col.get('name', col['value'])
+                if c == token['value']:
+                    token_val = str(col['value'])
+        prop_ob.append((token_val, token.get('sort', 'asc')))
+    exces = 0  # max(len(prop_ob) - len(solutions_ob), 0)
+    manque = 0  # max(len(prop_ob) - len(solutions_ob), 0)
+    sorts = 0
+    # On va créer des listes :
+    # - les colonnes présentes indépendamment de l'ordre et du tri => manque +x
+    liste_col_ob_sol = []
+    liste_col_ob_sol_sort = []
+    liste_col_ob_sql = []
+    for token in solutions_ob:
+        entry = []
+        for poss in token:
+            col, sort = poss
+            entry.append(col.upper())
+            liste_col_ob_sol_sort.append({col.upper():sort.upper()})
+        liste_col_ob_sol.append(entry)
+    for token in prop_ob:
+        col, sort = token
+        liste_col_ob_sql.append(col.upper())
+    for token in liste_col_ob_sol:
+        if all(entry not in liste_col_ob_sql for entry in token):
+            manque += 1
+    # - Les colonnes inutiles => exces +x
+    for col in liste_col_ob_sql:
+        if col not in [list(x.keys())[0] for x in liste_col_ob_sol_sort]:
+            exces += 1
+    # - Les colonnes présentes avec le mauvais tri => sorts +x
+    for token in prop_ob:
+        col, sort = token
+        col = col.upper()
+        sort = sort.upper()
+        for entry in liste_col_ob_sol_sort:
+            if col in entry.keys() and sort != entry[col]:
+                sorts += 1
+    return exces, manque, sorts
 
 
 def check_gb(sql, solutions):
