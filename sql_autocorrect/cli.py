@@ -541,8 +541,17 @@ def parse_requete(args, solutions):
             score -= malus_ob
 
         # TODO: Vérification des colonnes dans le GROUP BY
-        print(check_gb(sql, solutions))
+        exces_gb, manque_gb, inutile_gb = check_gb(sql, solutions)
         comm_gb = ''
+        if exces_gb:
+            comm_gb = "Il y a " + str(exces_gb) + " colonne(s) en trop dans le GROUP BY.\n"
+            score -= 1
+        if manque_gb:
+            comm_gb += "Il manque " + str(manque_gb) + " colonne(s) dans le GROUP BY.\n"
+            score -= manque_gb
+        if inutile_gb:
+            comm_gb = "Le GROUP BY est inutile."
+            score -= 1
 
         # TODO: Vérification des conditions dans le HAVING
         comm_having = ''
