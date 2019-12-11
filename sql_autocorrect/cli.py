@@ -525,7 +525,10 @@ def parse_requete(args, solutions):
         # TODO: Vérification des colonnes dans le ORDER BY
         comm_ob = ''
         exces_ob, manque_ob, sort_ob, desordre_ob = check_ob(sql, solutions)
-        score_ob = min([len(x) for x in solutions['orderby']])
+        if any(len(x) for x in solutions['orderby']):
+            score_ob = min([len(x) for x in solutions['orderby']])
+        else:
+            score_ob = 0
         if manque_ob == score_ob and 'orderby' not in sql.keys():
             comm_ob = "Le ORDER BY est manquant\n"
             score -= min(score_ob * 0.5, 1)
