@@ -180,14 +180,31 @@ def parse_solutions(fichier):
     return solutions
 
 
-def check_where(param, solutions):
+def check_where(sql, solutions):
     return 0, 0
 
 
-def check_alias_table(sql, solutions):
-    # Vérifier qu'il n'y a pas deux fois la même table sans alias
-    # Vérifier qu'il n'y a pas deux fois le même alias
-    pass
+def check_alias_table(sql):
+    sql_from = sql['from']
+    print(sql_from)
+    liste_noms = []
+    liste_alias = []
+    for token in sql_from:
+        if isinstance(token, dict):
+            # Vérifier qu'il n'y a pas deux fois le même alias
+            alias = token['name']
+            if alias in liste_alias:
+                return True
+            else:
+                liste_alias.append(alias)
+        else:
+            # Vérifier qu'il n'y a pas deux fois la même table sans alias
+            nom = token
+            if nom in liste_noms:
+                return True
+            else:
+                liste_noms.append(nom)
+    return False
 
 
 def check_ob(sql, solutions):
@@ -252,7 +269,7 @@ def check_ob(sql, solutions):
         for poss in token:
             col, sort = poss
             entry.append(col.upper())
-            liste_col_ob_sol_sort.append({col.upper():sort.upper()})
+            liste_col_ob_sol_sort.append({col.upper(): sort.upper()})
         liste_col_ob_sol.append(entry)
     for token in prop_ob:
         col, sort = token
@@ -365,7 +382,7 @@ def exces_manque_gb(agregats, solutions, sql, sql_select):
     return exces, manque, False, False
 
 
-def check_having(param, solutions):
+def check_having(sql, solutions):
     return 0, 0
 
 

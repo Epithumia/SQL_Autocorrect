@@ -3,7 +3,8 @@ import unittest
 import sqlparse
 from moz_sql_parser import parse
 
-from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, check_ob
+from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, check_ob, \
+    check_alias_table
 
 
 class FunctionalTests(unittest.TestCase):
@@ -228,7 +229,7 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         self.assertTupleEqual(check_alias_agregat(sql), (
-        "COUNT(*) : mettez un alias\nCOUNT(DISTINCT(NbNotesUtilisateurs)) : mettez un alias", -0.25))
+            "COUNT(*) : mettez un alias\nCOUNT(DISTINCT(NbNotesUtilisateurs)) : mettez un alias", -0.25))
 
     def test_orderby_ok(self):
         with open('tests/requetes/orderby_ok_alias.sql', 'r') as r:
@@ -253,3 +254,24 @@ class FunctionalTests(unittest.TestCase):
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/orderby_solution.sql')
         self.assertEqual(check_ob(sql, solutions), (1, 2, 2))
+
+    def test_alias_table_ok(self):
+        with open('tests/requetes/alias_table_ok.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        self.assertEqual(check_alias_table(sql), False)
+
+    def test_alias_table_err_alias(self):
+        with open('tests/requetes/alias_table_err_alias.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        self.assertEqual(check_alias_table(sql), True)
+
+    def test_alias_table_err_table(self):
+        with open('tests/requetes/alias_table_err_table.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        self.assertEqual(check_alias_table(sql), True)
