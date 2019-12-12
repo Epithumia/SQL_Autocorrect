@@ -260,6 +260,8 @@ def check_ob(sql, solutions):
             # Dans ce cas, cela pourrait être un alias, on cherche dans la solution courante
             # la formule cachée et on la stocke à la place
             sel = sql['select']
+            if not isinstance(sel, list):
+                sel = [sel]
             for col in sel:
                 c = col.get('name', col['value'])
                 if c == token['value']:
