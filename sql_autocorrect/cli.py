@@ -1,6 +1,7 @@
 import argparse
 import sys
 from itertools import islice, filterfalse
+from numbers import Number
 
 import sqlparse
 from moz_sql_parser import parse, format
@@ -28,7 +29,7 @@ def unique_everseen(iterable, key=None):
                 yield element
 
 
-def parse_sql_rs(rs):
+def parse_sql_rs(rs, nb_lignes=25):
     """
     Fonction qui prend un ResultProxy et qui renvoie un tableau PrettyTable avec le résultat de la requête.
 
@@ -37,10 +38,25 @@ def parse_sql_rs(rs):
     """
     sql_res = PrettyTable()
     sql_res.field_names = rs.keys()
-    for row in islice(rs, 25):
+    for row in islice(rs, nb_lignes):
         r = ['null' if x is None else x for x in list(row)]
         sql_res.add_row(r)
     return sql_res
+
+
+def compare_sql(r1, r2):
+    res1 = list(r1)
+    res2 = list(r2)
+    if len(res1) != len(res2):
+        return False, "Mauvais nombre de lignes"
+    if len(res1) != len(res2):
+        return False, "Mauvais nombre de colonnes"
+    for i in range(len(res1)):
+        s1 = sorted(res1[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
+        s2 = sorted(res2[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
+        if s1 != s2:
+            return False, "Les résultats sont différents " + str(s1) + " <> " + str(s2)
+    return True, None
 
 
 def check_alias_agregat(sql):
@@ -592,28 +608,43 @@ def parse_requete(args, solutions):
                 print(comm_having.strip()) if comm_having else None
                 print(comm_ob.strip()) if comm_ob else None
             else:
-                print("Pas de remarques")
+                print("Pas de remarques sur la requête")
 
-        # Affichage de la note
-        if args.g:
-            print(score)
-
-        seconds = 10
+        seconds = 15
+        if isinstance(solutions, list):
+            sol = solutions[0]
+        else:
+            sol = solutions
+        qsol = [format(s) for s in sol['requete']]
+        rsol = [conn.execute(q) for q in qsol]
         t = threading.Timer(seconds, conn.connection.interrupt)
         t.start()
         try:
             rs = conn.execute(stmt)
-            res = parse_sql_rs(rs)
-
             # Affichage du résultat
             if args.res:
+                res = parse_sql_rs(rs)
                 print(res)
+            else:
+                arr_res_bon = []
+                arr_msg = []
+                for r in rsol:
+                    res_bon, msg = compare_sql(r, rs)
+                    arr_res_bon.append(res_bon)
+                    arr_msg.append(msg)
+                if all(arr_res == False for arr_res in arr_res_bon):
+                    print(arr_msg[0])
+                    score -= 0.5
         except OperationalError as e:
             if str(e.orig) == 'interrupted':
-                print("Requête interrompue car trop longue à s'exécuter.")
+                Exception("Requête interrompue car trop longue à s'exécuter.")
             else:
                 print(e)
         t.cancel()
+
+        # Affichage de la note
+        if args.g:
+            print(score)
 
 
 def parse_args(args):
