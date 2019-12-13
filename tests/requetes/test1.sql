@@ -4,5 +4,5 @@ WHERE J.IdJeu = C.IdJeu
 AND C.IdCategorie = P.IdPropriete
 AND NomPropriete = 'Exploration'
 AND NoteMoyenne>=8
-AND Rang > 0
+AND Rang IS NOT NULL
 ORDER BY Rang;
