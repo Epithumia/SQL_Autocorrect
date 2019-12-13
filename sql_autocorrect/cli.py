@@ -120,6 +120,7 @@ def parse_solutions(fichier):
         solutions['having'] = []
         solutions['orderby'] = []
         solutions['requete'] = []
+        solutions['requete_txt'] = [s for s in solutions_sql if s != '']
         for stmt in solutions_sql:
             if stmt != '':
                 sql = parse(stmt)
@@ -615,7 +616,7 @@ def parse_requete(args, solutions):
             sol = solutions[0]
         else:
             sol = solutions
-        qsol = [format(s) for s in sol['requete']]
+        qsol = sol['requete_txt']
         rsol = [conn.execute(q) for q in qsol]
         t = threading.Timer(seconds, conn.connection.interrupt)
         t.start()
