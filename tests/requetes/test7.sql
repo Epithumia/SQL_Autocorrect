@@ -1,7 +1,8 @@
-SELECT NomJeu
-FROM Personne, Conception, Jeu
-WHERE IdPersonne = IdConcepteur
-AND Conception.IdJeu = Jeu.IdJeu
-AND NomPersonne = 'Bruno Faidutti'
+SELECT NomJeu, Rang
+FROM Jeu, SousDomaineJeu, Famille
+WHERE Jeu.IdJeu = SousDomaineJeu.IdJeu
+AND IdSousDomaine = IdFamille
+AND NomFamille = 'Strategy Games'
 AND Rang > 0
-ORDER BY NomJeu;
+AND NbNotesUtilisateurs > 17000
+ORDER BY Rang;

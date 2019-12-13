@@ -1,8 +1,6 @@
-SELECT Jeu.IdJeu, NomJeu, COUNT(*) AS NbExtensions
-FROM Jeu, Extension, Categorie, Propriete
-WHERE Jeu.IdJeu = IdJeuBase
-AND Jeu.IdJeu = Categorie.IdJeu
-AND Categorie.IdCategorie = IdPropriete
-AND NomPropriete = 'Collectible Components'
-GROUP BY Jeu.IdJeu, NomJeu
-ORDER BY NbExtensions DESC, NomJeu;
+SELECT J2.NomJeu
+FROM Jeu J1, Jeu J2, Accessoire A
+WHERE J1.IdJeu = A.IdJeuSociete
+AND J2.IdJeu = A.IdAccessoire
+AND J1.NomJeu = 'Scythe'
+ORDER BY J2.NomJeu;

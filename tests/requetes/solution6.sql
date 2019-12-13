@@ -1,6 +1,7 @@
-SELECT J2.NomJeu
-FROM Jeu J1, Jeu J2, Accessoire A
-WHERE J1.IdJeu = A.IdJeuSociete
-AND J2.IdJeu = A.IdAccessoire
-AND J1.NomJeu = 'Scythe'
-ORDER BY J2.NomJeu;
+SELECT NomJeu
+FROM Personne, Conception, Jeu
+WHERE IdPersonne = IdConcepteur
+AND Conception.IdJeu = Jeu.IdJeu
+AND NomPersonne = 'Bruno Faidutti'
+AND Rang > 0
+ORDER BY NomJeu;
