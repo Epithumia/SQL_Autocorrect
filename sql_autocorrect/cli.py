@@ -45,11 +45,13 @@ def parse_sql_rs(rs, nb_lignes=25):
 
 
 def compare_sql(r1, r2):
+    c1 = len(r1.keys())
+    c2 = len(r2.keys())
     res1 = list(r1)
     res2 = list(r2)
     if len(res1) != len(res2):
-        return False, "Mauvais nombre de lignes"
-    if len(res1) != len(res2):
+        return False, "Mauvais nombre de lignes (attendu : " + str(len(res1)) + ", obtenu : " + str(len(res2)) + ")"
+    if c1 != c2:
         return False, "Mauvais nombre de colonnes"
     for i in range(len(res1)):
         s1 = sorted(res1[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
