@@ -636,7 +636,8 @@ def parse_requete(args, solutions):
                     arr_res_bon.append(res_bon)
                     arr_msg.append(msg)
                 if all(arr_res == False for arr_res in arr_res_bon):
-                    print(arr_msg[0])
+                    if args.c:
+                        print(arr_msg[0])
                     score -= 0.5
         except OperationalError as e:
             if str(e.orig) == 'interrupted':
