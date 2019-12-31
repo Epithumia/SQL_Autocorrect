@@ -45,11 +45,13 @@ def parse_sql_rs(rs, nb_lignes=25):
     return sql_res
 
 
-def compare_sql(r1, r2):
+def compare_sql(r1, r2, max_lignes=1000000):
     c1 = len(r1.keys())
     c2 = len(r2.keys())
     res1 = list(r1)
-    res2 = list(r2)
+    res2 = []
+    for row in islice(r2, max_lignes):
+        res2.append(row)
     if len(res1) != len(res2):
         return False, "Mauvais nombre de lignes (attendu : " + str(len(res1)) + ", obtenu : " + str(len(res2)) + ")"
     if c1 != c2:
@@ -650,8 +652,11 @@ def parse_requete(args, solutions):
                         print(arr_msg[0])
                     score -= 0.5
         except OperationalError as e:
+            print(e.orig)
+            import resource
+            print(resource.getrusage(resource.RUSAGE_SELF))
             if str(e.orig) == 'interrupted':
-                Exception("Requête interrompue car trop longue à s'exécuter.")
+                raise Exception("Requête interrompue car trop longue à s'exécuter.")
             else:
                 print(e)
         t.cancel()
