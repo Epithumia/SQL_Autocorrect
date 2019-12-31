@@ -6,6 +6,7 @@ from numbers import Number
 import sqlparse
 from moz_sql_parser import parse, format
 from prettytable import PrettyTable
+from pyparsing import ParseException
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
@@ -492,7 +493,16 @@ def parse_requete(args, solutions):
     with open(args.f, 'r') as r:
         stmt = r.read()
         stmt = sqlparse.split(stmt)[0]
-        sql = parse(stmt)
+        try:
+            sql = parse(stmt)
+        except ParseException as e:
+            ligne = e.lineno
+            col = e.col
+            message = "Erreur à la ligne " + str(ligne) + ", colonne " + str(col) + " :\n<" + e.line + ">\n"
+            for _ in range(col):
+                message += " "
+            message += "^"
+            raise Exception(message)
         # pprint(sql)
         score = 0
 
@@ -672,7 +682,7 @@ def parse_args(args):
 def main():
     args = parse_args(sys.argv[1:])
     solutions = parse_solutions(args.s)
-    parse_requete(args, solutions)
+    parse_requete(args, solutions)  # TODO: catch exceptions, score, messages et tout stocker dans un fichier
 
 
 if __name__ == '__main__':
