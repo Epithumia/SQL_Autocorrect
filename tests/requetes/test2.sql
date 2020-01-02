@@ -5,6 +5,6 @@ AND IdEditeur = Compagnie.IdCompagnie
 AND Jeu.IdJeu = NbJoueurs.IdJeu
 AND SiteWebCompagnie is not null
 AND AnneePublicationJeu = 2019
-AND min <= 5
-AND max >= 5
+AND Minimum <= 5
+AND Maximum >= 5
 AND Type = 'Meilleur';
