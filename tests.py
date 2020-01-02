@@ -4,7 +4,8 @@ import sqlparse
 from moz_sql_parser import parse
 
 from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, check_ob, \
-    check_alias_table, check_having
+    check_alias_table, check_having, TableEnExces, TableManquante, AliasRepete, TableRepetee, OrderByAbsent, \
+    OrderByManque, OrderByExces, OrderByMalTrie, OrderByDesordre
 
 
 class FunctionalTests(unittest.TestCase):
@@ -57,7 +58,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/from_solution.sql')
-        self.assertTupleEqual(check_tables(sql, solutions), (0, 0))
+        correct, statut = check_tables(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_from_exces(self):
         with open('tests/requetes/from_exces.sql', 'r') as r:
@@ -65,7 +68,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/from_solution.sql')
-        self.assertTupleEqual(check_tables(sql, solutions), (1, 0))
+        correct, statut = check_tables(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], TableEnExces))
+        self.assertEqual(statut[0].exces, 1)
 
     def test_from_manque(self):
         with open('tests/requetes/from_manque.sql', 'r') as r:
@@ -73,7 +79,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/from_solution.sql')
-        self.assertTupleEqual(check_tables(sql, solutions), (0, 2))
+        correct, statut = check_tables(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], TableManquante))
+        self.assertEqual(statut[0].manque, 2)
 
     def test_groupby_seul_ok(self):
         with open('tests/requetes/groupby_seul_ok.sql', 'r') as r:
@@ -200,36 +209,50 @@ class FunctionalTests(unittest.TestCase):
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertTupleEqual(check_alias_agregat(sql), ('', 0))
+        correct, statut = check_alias_agregat(sql)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_alias_agregat_simple_manque(self):
         with open('tests/requetes/alias_agregat_simple_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertTupleEqual(check_alias_agregat(sql), ("COUNT(*) : mettez un alias", -0.25))
+        correct, statut = check_alias_agregat(sql)
+        self.assertEqual(correct, False)
+        self.assertEqual(statut[0].malus, 0.25)
+        self.assertEqual(statut[0].message, "COUNT(*) : mettez un alias")
 
     def test_alias_agregat_mix_ok(self):
         with open('tests/requetes/alias_agregat_mix_ok.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertTupleEqual(check_alias_agregat(sql), ('', 0))
+        correct, statut = check_alias_agregat(sql)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_alias_agregat_mix_semi_manque(self):
         with open('tests/requetes/alias_agregat_mix_semi_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertTupleEqual(check_alias_agregat(sql), ("COUNT(*) : mettez un alias", -0.25))
+        correct, statut = check_alias_agregat(sql)
+        self.assertEqual(correct, False)
+        self.assertEqual(statut[0].malus, 0.25)
+        self.assertEqual(statut[0].message, "COUNT(*) : mettez un alias")
 
     def test_alias_agregat_mix_manque(self):
         with open('tests/requetes/alias_agregat_mix_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertTupleEqual(check_alias_agregat(sql), (
-            "COUNT(*) : mettez un alias\nCOUNT(DISTINCT(NbNotesUtilisateurs)) : mettez un alias", -0.25))
+        correct, statut = check_alias_agregat(sql)
+        self.assertEqual(correct, False)
+        malus = sum(x.malus for x in statut)
+        self.assertEqual(malus, 0.25)
+        self.assertEqual(statut[0].message, "COUNT(*) : mettez un alias")
+        self.assertEqual(statut[1].message, "COUNT(DISTINCT(NbNotesUtilisateurs)) : mettez un alias")
 
     def test_orderby_ok(self):
         with open('tests/requetes/orderby_ok_alias.sql', 'r') as r:
@@ -237,7 +260,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/orderby_solution.sql')
-        self.assertEqual(check_ob(sql, solutions), (0, 0, 0, False))
+        correct, statut = check_ob(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_orderby_manque(self):
         with open('tests/requetes/orderby_manque.sql', 'r') as r:
@@ -245,7 +270,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/orderby_solution.sql')
-        self.assertEqual(check_ob(sql, solutions), (0, 5, 0, False))
+        correct, statut = check_ob(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], OrderByAbsent))
+        self.assertEqual(statut[0].nb_col, 5)
 
     def test_orderby_manque_4(self):
         with open('tests/requetes/orderby_manque_4.sql', 'r') as r:
@@ -253,7 +281,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/orderby_solution.sql')
-        self.assertEqual(check_ob(sql, solutions), (0, 4, 0, False))
+        correct, statut = check_ob(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], OrderByManque))
+        self.assertEqual(statut[0].manque, 4)
 
     def test_orderby_err_mixte(self):
         with open('tests/requetes/orderby_err_mixte.sql', 'r') as r:
@@ -261,7 +292,14 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/orderby_solution.sql')
-        self.assertEqual(check_ob(sql, solutions), (1, 2, 2, False))
+        correct, statut = check_ob(sql, solutions)
+        self.assertTrue(len(statut), 3)
+        self.assertTrue(isinstance(statut[0], OrderByExces))
+        self.assertEqual(statut[0].exces, 1)
+        self.assertTrue(isinstance(statut[1], OrderByManque))
+        self.assertEqual(statut[1].manque, 2)
+        self.assertTrue(isinstance(statut[2], OrderByMalTrie))
+        self.assertEqual(statut[2].nb_col, 2)
 
     def test_orderby_desordre(self):
         with open('tests/requetes/orderby_desordre.sql', 'r') as r:
@@ -269,28 +307,39 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/orderby_solution.sql')
-        self.assertEqual(check_ob(sql, solutions), (0, 0, 1, True))
+        correct, statut = check_ob(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertEqual(len(statut), 2)
+        self.assertTrue(isinstance(statut[0], OrderByMalTrie))
+        self.assertEqual(statut[0].nb_col, 1)
+        self.assertTrue(isinstance(statut[1], OrderByDesordre))
 
     def test_alias_table_ok(self):
         with open('tests/requetes/alias_table_ok.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertEqual(check_alias_table(sql), False)
+        correct, statut = check_alias_table(sql)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_alias_table_err_alias(self):
         with open('tests/requetes/alias_table_err_alias.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertEqual(check_alias_table(sql), True)
+        correct, statut = check_alias_table(sql)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], AliasRepete))
 
     def test_alias_table_err_table(self):
         with open('tests/requetes/alias_table_err_table.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
-        self.assertEqual(check_alias_table(sql), True)
+        correct, statut = check_alias_table(sql)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], TableRepetee))
 
     def test_having_ok(self):
         with open('tests/requetes/having_ok.sql', 'r') as r:

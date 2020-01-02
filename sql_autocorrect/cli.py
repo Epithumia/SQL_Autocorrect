@@ -2,6 +2,7 @@ import argparse
 import sys
 from itertools import islice, filterfalse
 from numbers import Number
+from typing import List, Tuple
 
 import sqlparse
 from moz_sql_parser import parse, format
@@ -10,6 +11,8 @@ from pyparsing import ParseException
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
+
+from sql_autocorrect.statut import *
 
 
 def unique_everseen(iterable, key=None):
@@ -45,54 +48,73 @@ def parse_sql_rs(rs, nb_lignes=25):
     return sql_res
 
 
-def compare_sql(r1, r2, max_lignes=1000000):
+def compare_sql(r1, r2, max_lignes=1000000) -> Tuple[bool, List[Statut]]:
+    correct = True
+    statut = []
     c1 = len(r1.keys())
     c2 = len(r2.keys())
     res1 = list(r1)
     res2 = []
     for row in islice(r2, max_lignes):
         res2.append(row)
+    if len(res2) == max_lignes:
+        correct = False
+        statut.append(MaxLignes())
     if len(res1) != len(res2):
-        return False, "Mauvais nombre de lignes (attendu : " + str(len(res1)) + ", obtenu : " + str(len(res2)) + ")"
+        correct = False
+        statut.append(NbLignesDiff(len(res1), len(res2)))
     if c1 != c2:
-        return False, "Mauvais nombre de colonnes"
+        correct = False
+        statut.append(NbColDiff(c1, c2))
+    if not correct:
+        return correct, statut
     for i in range(len(res1)):
         s1 = sorted(res1[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
         s2 = sorted(res2[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
         if s1 != s2:
-            return False, "Les résultats sont différents " + str(s1) + " <> " + str(s2)
-    return True, None
+            return False, [ResultatsDiff(s1, s2)]
+    return True, [StatutOk()]
 
 
-def check_alias_agregat(sql):
+def check_alias_agregat(sql) -> Tuple[bool, List[Statut]]:
     """
     Fonction qui vérifie les alias dans le SELECT pour vérifier que les agrégats ont été nommés
+
     :param sql:
-    :return:
+    :return: Booléen, vrai si la vérification est ok ; liste de statuts
+    :rtype: Tuple[bool, List[Statut]]
+
     """
-    msg = ''
-    score = 0
+    correct = True
+    statut = []
+    m = 0.25
     kw = ['count', 'sum', 'avg', 'min', 'max']
     sql_select = sql['select']
     if not isinstance(sql_select, list):
-        for w in kw:
-            if w in sql_select['value'] and 'name' not in sql_select:
-                d = format({'select': sql_select['value'][w]})[7:]
-                msg = w.upper() + '(' + d + ') : mettez un alias\n'
-                score = -0.25
-        return msg.rstrip(), score
+        sql_select = [sql_select]
+        # Au cas où :
+        # for w in kw:
+        #     if w in sql_select['value'] and 'name' not in sql_select:
+        #         correct = False
+        #         d = format({'select': sql_select['value'][w]})[7:]
+        #         statut.append(AliasManquant(w, d, m))
+        #         m = 0
+        # return correct, statut
     for item in sql_select:
         for w in kw:
             if w in item['value'] and 'name' not in item:
+                correct = False
                 d = format({'select': item['value'][w]})[7:]
-                msg += w.upper() + '(' + d + ') : mettez un alias\n'
-                score = -0.25
-    return msg.rstrip(), score
+                statut.append(AliasManquant(w, d, m))
+                m = 0
+    return correct, statut
 
 
-def check_tables(sql, solutions):
+def check_tables(sql, solutions) -> Tuple[bool, List[Statut]]:
     sql_from = sql['from']
     tables_solution = solutions['from']
+    correct = True
+    statut = []
     if not isinstance(sql_from, list):
         sql_from = [sql_from]
     manque = 9999
@@ -110,7 +132,13 @@ def check_tables(sql, solutions):
         manque = min(manque, len(sol) - len(c))
         exces = max(exces, len(prop) - len(c))
         # TODO: vérifier les jointures et donc récupérer ce qui dépasse
-    return exces, manque
+    if exces > 0:
+        correct = False
+        statut.append(TableEnExces(exces))
+    if manque > 0:
+        correct = False
+        statut.append(TableManquante(manque))
+    return correct, statut
 
 
 def parse_solutions(fichier):
@@ -203,37 +231,48 @@ def parse_solutions(fichier):
     return solutions
 
 
-def check_where(sql, solutions):
-    return 0, 0
+def check_where(sql, solutions) -> Tuple[bool, List[Statut]]:
+    correct = True
+    statut = []
+    return correct, statut
 
 
-def check_alias_table(sql):
+def check_alias_table(sql) -> Tuple[bool, List[Statut]]:
     sql_from = sql['from']
-    # print(sql_from)
     liste_noms = []
     liste_alias = []
+    correct = True
+    check_alias = True
+    check_table = True
+    statut = []
     for token in sql_from:
         if isinstance(token, dict):
             # Vérifier qu'il n'y a pas deux fois le même alias
             alias = token['name']
-            if alias in liste_alias:
-                return True
+            if alias in liste_alias and check_alias:
+                correct = False
+                check_alias = False
+                statut.append(AliasRepete())
             else:
                 liste_alias.append(alias)
         else:
             # Vérifier qu'il n'y a pas deux fois la même table sans alias
             nom = token
-            if nom in liste_noms:
-                return True
+            if nom in liste_noms and check_table:
+                correct = False
+                check_table = False
+                statut.append(TableRepetee())
             else:
                 liste_noms.append(nom)
-    return False
+    return correct, statut
 
 
-def check_ob(sql, solutions):
+def check_ob(sql, solutions) -> Tuple[bool, List[Statut]]:
     # Comparer avec la solution
     # -- colonne doit être soit un dans le SELECT (colonne, calcul ou alias)(, soit dans le GROUP BY, soit un index).
     # -- vérifier si dans une des solutions (construire variantes orthogonales)
+    correct = True
+    statut = []
     solutions_ob = []
     s = 0
     for sol in solutions['requete']:
@@ -267,7 +306,9 @@ def check_ob(sql, solutions):
                 i += 1
         s += 1
     if 'orderby' not in sql:
-        return 0, len(solutions_ob), 0, False
+        correct = False
+        statut.append(OrderByAbsent(len(solutions_ob), 0.5))
+        return correct, statut
     prop_ob = []
     sql_ob = sql['orderby']
     if not isinstance(sql_ob, list):
@@ -330,10 +371,22 @@ def check_ob(sql, solutions):
             sols = [sol[0].upper() for sol in solutions_ob[i]]
             if col not in sols:
                 desordre = True
-    return exces, manque, sorts, desordre
+    if exces > 0:
+        correct = False
+        statut.append(OrderByExces(exces))
+    if manque > 0:
+        correct = False
+        statut.append(OrderByManque(manque))
+    if sorts > 0:
+        correct = False
+        statut.append(OrderByMalTrie(sorts))
+    if desordre:
+        correct = False
+        statut.append(OrderByDesordre())
+    return correct, statut
 
 
-def check_gb(sql, solutions):
+def check_gb(sql, solutions) -> Tuple[bool, List[Statut]]:
     agregats = ['count', 'sum', 'avg', 'min', 'max']
     if not isinstance(solutions['requete'], list):
         solutions = [solutions['requete']]
@@ -390,7 +443,7 @@ def check_gb(sql, solutions):
         return exces_manque_gb(agregats, solutions_gb, sql, sql_select)
 
 
-def exces_manque_gb(agregats, solutions, sql, sql_select):
+def exces_manque_gb(agregats, solutions, sql, sql_select) -> Tuple[bool, List[Statut]]:
     exces = 0
     manque = 9999
     if not isinstance(sql['groupby'], list):
@@ -427,7 +480,7 @@ def exces_manque_gb(agregats, solutions, sql, sql_select):
     return exces, manque, False
 
 
-def check_having(sql, solutions):
+def check_having(sql, solutions) -> Tuple[bool, List[Statut]]:
     exces = manque = 0
     sols = solutions
     if not isinstance(solutions, list):
@@ -448,7 +501,7 @@ def check_having(sql, solutions):
     return exces, manque, False, False
 
 
-def check_select(sql, solutions):
+def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     sql_select = sql['select']
     if not isinstance(sql_select, list):
         sql_select = [sql_select]
@@ -644,17 +697,14 @@ def parse_requete(args, solutions):
                 arr_res_bon = []
                 arr_msg = []
                 for r in rsol:
-                    res_bon, msg = compare_sql(r, rs)
+                    res_bon, statut = compare_sql(r, rs)
                     arr_res_bon.append(res_bon)
-                    arr_msg.append(msg)
+                    arr_msg.extend(list(x.message for x in statut))
                 if all(arr_res == False for arr_res in arr_res_bon):
                     if args.c:
                         print(arr_msg[0])
                     score -= 0.5
         except OperationalError as e:
-            print(e.orig)
-            import resource
-            print(resource.getrusage(resource.RUSAGE_SELF))
             if str(e.orig) == 'interrupted':
                 raise Exception("Requête interrompue car trop longue à s'exécuter.")
             else:
