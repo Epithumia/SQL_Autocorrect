@@ -156,3 +156,52 @@ class OrderByDesordre(Statut):
         self.code = 14
         self.malus = malus
         self.message = "Les colonnes du ORDER BY ne sont pas dans le bon ordre."
+
+
+class GroupByInutile(Statut):
+    def __init__(self, malus=1.0):
+        super().__init__()
+        self.code = 15
+        self.malus = malus
+        self.message = "GROUP BY inutile."
+
+
+class GroupByAbsent(Statut):
+    def __init__(self, nb_col, malus=1.0):
+        super().__init__()
+        self.code = 16
+        self.nb_col = nb_col
+        self.malus = malus * nb_col
+        self.message = "GROUP BY inutile."
+
+
+class GroupBySansAgregat(Statut):
+    def __init__(self, malus=1.0):
+        super().__init__()
+        self.code = 17
+        self.malus = malus
+        self.message = "GROUP BY sans agrégat."
+
+
+class GroupByManque(Statut):
+    def __init__(self, manque, malus=0.5):
+        super().__init__()
+        self.code = 17
+        self.manque = manque
+        self.malus = malus * manque
+        if manque > 1:
+            self.message = "Il manque " + str(manque) + "colonnes dans le GROUP BY."
+        else:
+            self.message = "Il manque " + str(manque) + "colonne dans le GROUP BY."
+
+
+class GroupByExces(Statut):
+    def __init__(self, exces, malus=0.5):
+        super().__init__()
+        self.code = 17
+        self.exces = exces
+        self.malus = malus * exces
+        if exces > 1:
+            self.message = "Il manque " + str(exces) + "colonnes dans le GROUP BY."
+        else:
+            self.message = "Il manque " + str(exces) + "colonne dans le GROUP BY."

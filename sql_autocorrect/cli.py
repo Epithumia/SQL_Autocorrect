@@ -387,6 +387,8 @@ def check_ob(sql, solutions) -> Tuple[bool, List[Statut]]:
 
 
 def check_gb(sql, solutions) -> Tuple[bool, List[Statut]]:
+    correct = True
+    statut = []
     agregats = ['count', 'sum', 'avg', 'min', 'max']
     if not isinstance(solutions['requete'], list):
         solutions = [solutions['requete']]
@@ -400,14 +402,16 @@ def check_gb(sql, solutions) -> Tuple[bool, List[Statut]]:
         # Pas de GB dans les solutions
         if 'groupby' in sql.keys():
             # GROUP BY inutile
-            return 0, 0, True
-        else:
-            return 0, 0, False
+            correct = False
+            statut.append(GroupByInutile())
+        return correct, statut
     if all('groupby' in sol.keys() and len(sol['groupby']) for sol in solutions):
         # Forcément GB dans la solution
         if 'groupby' not in sql.keys():
-            manque = min(len(sol['groupby']) for sol in solutions)
-            return 0, manque, False
+            correct = False
+            nb_col = min(len(sol['groupby']) for sol in solutions)
+            statut.append(GroupByAbsent(nb_col))
+            return correct, statut
         else:
             return exces_manque_gb(agregats, solutions, sql, sql_select)
     # Troisième branche : il y a une/+ solution avec et une/+ sans
@@ -420,21 +424,25 @@ def check_gb(sql, solutions) -> Tuple[bool, List[Statut]]:
     if 'groupby' not in sql.keys():
         # -- Si pas d'agrégat dans le select et pas de having  => return 0, 0, False
         if len(ag_select) == 0 and 'having' not in sql.keys():
-            return 0, 0, False
+            return correct, statut
         # -- Si pas d'agrégat dans le select mais having present : return 0, 0, False (sera analyse par check_having)
         if len(ag_select) == 0 and 'having' in sql.keys():
-            return 0, 0, False
+            return correct, statut
         # -- Si agrégat dans le select => manque N => return 0, N, False, False
-        manque = 9999
+        nb_col = 9999
         for sol in solutions:
             if 'groupby' in sol.keys():
-                manque = min(manque, len(sol['groupby']))
-        return 0, manque, False
+                correct = False
+                nb_col = min(nb_col, len(sol['groupby']))
+                statut.append(GroupByAbsent(nb_col))
+        return correct, statut
     else:
         # Sous-cas #2 :
-        # -- group by sans agrégat => (0, 0, False, True)
+        # -- group by sans agrégat => (0, 0, True)
         if len(ag_select) == 0 and 'having' not in sql.keys():
-            return 0, 0, True
+            correct = False
+            statut.append(GroupBySansAgregat())
+            return correct, statut
         # -- group by dans la proposition => comparer avec solutions à group by => exces/manque/ok
         solutions_gb = []
         for sol in solutions:
@@ -446,6 +454,8 @@ def check_gb(sql, solutions) -> Tuple[bool, List[Statut]]:
 def exces_manque_gb(agregats, solutions, sql, sql_select) -> Tuple[bool, List[Statut]]:
     exces = 0
     manque = 9999
+    correct = True
+    statut = []
     if not isinstance(sql['groupby'], list):
         sql_gb = [sql['groupby']]
     else:
@@ -477,7 +487,13 @@ def exces_manque_gb(agregats, solutions, sql, sql_select) -> Tuple[bool, List[St
         if all(token in prop_gb for token in prop_select):
             # Il manque probablement juste un identifiant dans le GB pour couvrir contre les homonymes
             manque = manque / 2.0
-    return exces, manque, False
+    if manque > 0:
+        correct = False
+        statut.append(GroupByManque(manque))
+    if exces > 0:
+        correct = False
+        statut.append(GroupByExces(exces))
+    return correct, statut
 
 
 def check_having(sql, solutions) -> Tuple[bool, List[Statut]]:

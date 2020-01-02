@@ -4,8 +4,8 @@ import sqlparse
 from moz_sql_parser import parse
 
 from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, check_ob, \
-    check_alias_table, check_having, TableEnExces, TableManquante, AliasRepete, TableRepetee, OrderByAbsent, \
-    OrderByManque, OrderByExces, OrderByMalTrie, OrderByDesordre
+    check_alias_table, check_having
+from sql_autocorrect.statut import *
 
 
 class FunctionalTests(unittest.TestCase):
@@ -90,7 +90,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_seul_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_groupby_seul_exces(self):
         with open('tests/requetes/groupby_seul_exces.sql', 'r') as r:
@@ -98,7 +100,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_seul_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (1, 0, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByExces))
+        self.assertEqual(statut[0].exces, 1)
 
     def test_groupby_seul_manque(self):
         with open('tests/requetes/groupby_seul_manque.sql', 'r') as r:
@@ -106,7 +111,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_seul_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 1, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByManque))
+        self.assertEqual(statut[0].manque, 1)
 
     def test_groupby_seul_semi_manque(self):
         with open('tests/requetes/groupby_seul_semi_manque.sql', 'r') as r:
@@ -114,7 +122,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_seul_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0.5, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByManque))
+        self.assertEqual(statut[0].manque, 0.5)
 
     def test_groupby_seul_absent(self):
         with open('tests/requetes/groupby_seul_absent.sql', 'r') as r:
@@ -122,7 +133,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_seul_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 2, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByAbsent))
+        self.assertEqual(statut[0].nb_col, 2)
 
     def test_groupby_simple_ok(self):
         with open('tests/requetes/groupby_simple_ok.sql', 'r') as r:
@@ -130,7 +144,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_simple_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_groupby_simple_inutile(self):
         with open('tests/requetes/groupby_simple_inutile.sql', 'r') as r:
@@ -138,7 +154,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_simple_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0, True))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByInutile))
 
     def test_groupby_mix_ok1(self):
         with open('tests/requetes/groupby_mix_ok1.sql', 'r') as r:
@@ -146,7 +164,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_groupby_mix_manque(self):
         with open('tests/requetes/groupby_mix_manque.sql', 'r') as r:
@@ -154,7 +174,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 1, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByManque))
+        self.assertEqual(statut[0].manque, 1)
 
     def test_groupby_mix_semi_manque(self):
         with open('tests/requetes/groupby_mix_semi_manque.sql', 'r') as r:
@@ -162,7 +185,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0.5, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByManque))
+        self.assertEqual(statut[0].manque, 0.5)
 
     def test_groupby_mix_exces(self):
         with open('tests/requetes/groupby_mix_exces.sql', 'r') as r:
@@ -170,7 +196,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (1, 0, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByExces))
+        self.assertEqual(statut[0].exces, 1)
 
     def test_groupby_mix_ok2(self):
         with open('tests/requetes/groupby_mix_ok2.sql', 'r') as r:
@@ -178,7 +207,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_groupby_mix_groupby_inutile(self):
         with open('tests/requetes/groupby_mix_groupby_inutile.sql', 'r') as r:
@@ -186,7 +217,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0, True))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupBySansAgregat))
 
     def test_groupby_mix_agregat_sans_groupby(self):
         with open('tests/requetes/groupby_mix_agregat_select_sans_groupby.sql', 'r') as r:
@@ -194,7 +227,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 2, False))
+        correct, statut = check_gb(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], GroupByAbsent))
+        self.assertEqual(statut[0].nb_col, 2)
 
     def test_groupby_mix_having_sans_groupby(self):
         with open('tests/requetes/groupby_mix_agregat_having_sans_groupby.sql', 'r') as r:
@@ -202,7 +238,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/groupby_mix_solution.sql')
-        self.assertTupleEqual(check_gb(sql, solutions), (0, 0, False))
+        correct, statut = check_gb(sql, solutions)
+        print(statut)
+        self.assertEqual(correct, True)  # Vérifié par check HAVING
+        self.assertEqual(len(statut), 0)
 
     def test_alias_agregat_simple_ok(self):
         with open('tests/requetes/alias_agregat_simple_ok.sql', 'r') as r:
