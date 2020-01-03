@@ -528,11 +528,15 @@ def check_having(sql, solutions) -> Tuple[bool, List[Statut]]:
 
 def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     sql_select = sql['select']
+    correct = True
+    statut = []
     if not isinstance(sql_select, list):
         sql_select = [sql_select]
     # SELECT * au lieu de colonnes précises
     if sql_select[0] == '*' and '*' not in solutions['select']:
-        return 0, 0, False, True
+        correct = False
+        statut.append(SelectEtoile())
+        return correct, statut
 
     # Excès et/ou manque
     exces = 0
@@ -557,8 +561,17 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
             sol = [str(x).split('.')[-1] for x in sol]
             if desordre and len(sol) == len(prop) and all(sol[i] == prop[i] for i in range(len(sol))):
                 desordre = False
-        return 0, 0, desordre, False
-    return exces, manque, False, False
+        if desordre:
+            correct = False
+            statut.append(SelectDesordre())
+        return correct, statut
+    else:
+        correct = False
+    if manque > 0:
+        statut.append(SelectManque(manque))
+    if exces > 0:
+        statut.append(SelectExces(exces))
+    return correct, statut
 
 
 def parse_requete(args, solutions):

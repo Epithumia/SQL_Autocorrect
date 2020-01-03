@@ -18,7 +18,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/select_solution.sql')
-        self.assertTupleEqual(check_select(sql, solutions), (0, 0, False, False))
+        correct, statut = check_select(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_select_etoile(self):
         with open('tests/requetes/select_etoile.sql', 'r') as r:
@@ -26,7 +28,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/select_solution.sql')
-        self.assertTupleEqual(check_select(sql, solutions), (0, 0, False, True))
+        correct, statut = check_select(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], SelectEtoile))
 
     def test_select_exces(self):
         with open('tests/requetes/select_exces.sql', 'r') as r:
@@ -34,7 +38,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/select_solution.sql')
-        self.assertTupleEqual(check_select(sql, solutions), (1, 0, False, False))
+        correct, statut = check_select(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], SelectExces))
+        self.assertEqual(statut[0].exces, 1)
 
     def test_select_manque(self):
         with open('tests/requetes/select_manque.sql', 'r') as r:
@@ -42,7 +49,10 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/select_solution.sql')
-        self.assertTupleEqual(check_select(sql, solutions), (0, 1, False, False))
+        correct, statut = check_select(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], SelectManque))
+        self.assertEqual(statut[0].manque, 1)
 
     def test_select_desordre(self):
         with open('tests/requetes/select_desordre.sql', 'r') as r:
@@ -50,7 +60,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/select_solution.sql')
-        self.assertTupleEqual(check_select(sql, solutions), (0, 0, True, False))
+        correct, statut = check_select(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], SelectDesordre))
 
     def test_from_ok(self):
         with open('tests/requetes/from_ok.sql', 'r') as r:

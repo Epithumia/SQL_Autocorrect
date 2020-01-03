@@ -190,9 +190,9 @@ class GroupByManque(Statut):
         self.manque = manque
         self.malus = malus * manque
         if manque > 1:
-            self.message = "Il manque " + str(manque) + "colonnes dans le GROUP BY."
+            self.message = "Il manque " + str(manque) + " colonnes dans le GROUP BY."
         else:
-            self.message = "Il manque " + str(manque) + "colonne dans le GROUP BY."
+            self.message = "Il manque " + str(manque) + " colonne dans le GROUP BY."
 
 
 class GroupByExces(Statut):
@@ -202,9 +202,9 @@ class GroupByExces(Statut):
         self.exces = exces
         self.malus = malus * exces
         if exces > 1:
-            self.message = "Il manque " + str(exces) + "colonnes dans le GROUP BY."
+            self.message = "Il manque " + str(exces) + " colonnes dans le GROUP BY."
         else:
-            self.message = "Il manque " + str(exces) + "colonne dans le GROUP BY."
+            self.message = "Il manque " + str(exces) + " colonne dans le GROUP BY."
 
 
 class HavingManquant(Statut):
@@ -214,9 +214,9 @@ class HavingManquant(Statut):
         self.manque = manque
         self.malus = malus * manque
         if manque > 1:
-            self.message = "Il manque " + str(manque) + "conditions dans le HAVING."
+            self.message = "Il manque " + str(manque) + " conditions dans le HAVING."
         else:
-            self.message = "Il manque " + str(manque) + "condition dans le HAVING."
+            self.message = "Il manque " + str(manque) + " condition dans le HAVING."
 
 
 class HavingExces(Statut):
@@ -226,9 +226,9 @@ class HavingExces(Statut):
         self.exces = exces
         self.malus = malus * exces
         if exces > 1:
-            self.message = "Il y a " + str(exces) + "conditions en trop dans le HAVING."
+            self.message = "Il y a " + str(exces) + " conditions en trop dans le HAVING."
         else:
-            self.message = "Il y a " + str(exces) + "condition en trop dans le HAVING."
+            self.message = "Il y a " + str(exces) + " condition en trop dans le HAVING."
 
 
 class HavingInutile(Statut):
@@ -245,3 +245,43 @@ class HavingSansGB(Statut):
         self.code = 20
         self.malus = malus
         self.message = "HAVING sans GROUP BY."
+
+
+class SelectEtoile(Statut):
+    def __init__(self, malus=1):
+        super().__init__()
+        self.code = 21
+        self.malus = malus
+        self.message = "SELECT * au lieu des colonnes demandées."
+
+
+class SelectDesordre(Statut):
+    def __init__(self, malus=0.0):
+        super().__init__()
+        self.code = 22
+        self.malus = malus
+        self.message = "Les colonnes du SELECT ne sont pas dans l'ordre demandé."
+
+
+class SelectExces(Statut):
+    def __init__(self, exces, malus=0.25):
+        super().__init__()
+        self.code = 23
+        self.malus = malus
+        self.exces = exces
+        if exces > 1:
+            self.message = "Il y a " + str(exces) + " colonnes en trop dans le SELECT."
+        else:
+            self.message = "Il y a " + str(exces) + " colonne en trop dans le SELECT."
+
+
+class SelectManque(Statut):
+    def __init__(self, manque, malus=0.25):
+        super().__init__()
+        self.code = 24
+        self.malus = malus * manque
+        self.manque = manque
+        if manque > 1:
+            self.message = "Il y a " + str(manque) + " colonnes manquantes dans le SELECT."
+        else:
+            self.message = "Il y a " + str(manque) + " colonne manquante dans le SELECT."
