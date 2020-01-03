@@ -205,3 +205,43 @@ class GroupByExces(Statut):
             self.message = "Il manque " + str(exces) + "colonnes dans le GROUP BY."
         else:
             self.message = "Il manque " + str(exces) + "colonne dans le GROUP BY."
+
+
+class HavingManquant(Statut):
+    def __init__(self, manque, malus=0.5):
+        super().__init__()
+        self.code = 18
+        self.manque = manque
+        self.malus = malus * manque
+        if manque > 1:
+            self.message = "Il manque " + str(manque) + "conditions dans le HAVING."
+        else:
+            self.message = "Il manque " + str(manque) + "condition dans le HAVING."
+
+
+class HavingExces(Statut):
+    def __init__(self, exces, malus=0.5):
+        super().__init__()
+        self.code = 19
+        self.exces = exces
+        self.malus = malus * exces
+        if exces > 1:
+            self.message = "Il y a " + str(exces) + "conditions en trop dans le HAVING."
+        else:
+            self.message = "Il y a " + str(exces) + "condition en trop dans le HAVING."
+
+
+class HavingInutile(Statut):
+    def __init__(self, malus=1):
+        super().__init__()
+        self.code = 20
+        self.malus = malus
+        self.message = "Il n'y a pas besoin de HAVING."
+
+
+class HavingSansGB(Statut):
+    def __init__(self, malus=1):
+        super().__init__()
+        self.code = 20
+        self.malus = malus
+        self.message = "HAVING sans GROUP BY."

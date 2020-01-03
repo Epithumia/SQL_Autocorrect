@@ -497,12 +497,15 @@ def exces_manque_gb(agregats, solutions, sql, sql_select) -> Tuple[bool, List[St
 
 
 def check_having(sql, solutions) -> Tuple[bool, List[Statut]]:
-    exces = manque = 0
     sols = solutions
+    correct = True
+    statut = []
     if not isinstance(solutions, list):
         sols = [solutions]
     if 'having' in sql.keys() and 'groupby' not in sql.keys():
-        return exces, manque, True, False
+        correct = False
+        statut.append(HavingSansGB())
+        return correct, statut
     if all(('having' in sol.keys() and len(sol['having'])) for sol in sols) and 'having' not in sql.keys():
         min_having = 9999
         for sol in sols:
@@ -511,10 +514,16 @@ def check_having(sql, solutions) -> Tuple[bool, List[Statut]]:
                 s = [sol['having']]
             min_having = min(min_having, len(s))
         manque = min_having
-        return exces, manque, False, False
+        if manque > 0:
+            correct = False
+            statut.append(HavingManquant(manque))
+        return correct, statut
     if not any('having' in sol.keys() and len(sol['having']) for sol in sols) and 'having' in sql.keys():
-        return exces, manque, False, True
-    return exces, manque, False, False
+        correct = False
+        statut.append(HavingInutile())
+        return correct, statut
+    # TODO: calculer manque et exces dans le cas où partiellement bon/faux
+    return correct, statut
 
 
 def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:

@@ -386,7 +386,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/having_solution.sql')
-        self.assertEqual(check_having(sql, solutions), (0, 0, False, False))
+        correct, statut = check_having(sql, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
 
     def test_having_manquant(self):
         with open('tests/requetes/having_manquant.sql', 'r') as r:
@@ -394,7 +396,34 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/having_solution.sql')
-        self.assertEqual(check_having(sql, solutions), (0, 1, False, False))
+        correct, statut = check_having(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], HavingManquant))
+        self.assertEqual(statut[0].manque, 1)
+
+    # TODO : calculer manque et exces dans le cas où partiellement bon/faux
+    # def test_having_exces(self):
+    #     with open('tests/requetes/having_exces.sql', 'r') as r:
+    #         stmt = r.read()
+    #         stmt = sqlparse.split(stmt)[0]
+    #         sql = parse(stmt)
+    #     solutions = parse_solutions('tests/requetes/having_solution.sql')
+    #     correct, statut = check_having(sql, solutions)
+    #     self.assertEqual(correct, False)
+    #     self.assertTrue(isinstance(statut[0], HavingExces))
+    #     self.assertEqual(statut[0].exces, 1)
+    #     # self.assertEqual(check_having(sql, solutions), (1, 0, False, False))
+    #
+    # def test_having_manque1(self):
+    #     with open('tests/requetes/having_manque1.sql', 'r') as r:
+    #         stmt = r.read()
+    #         stmt = sqlparse.split(stmt)[0]
+    #         sql = parse(stmt)
+    #     solutions = parse_solutions('tests/requetes/having_solution2.sql')
+    #     correct, statut = check_having(sql, solutions)
+    #     self.assertEqual(correct, False)
+    #     self.assertTrue(isinstance(statut[0], HavingManquant))
+    #     self.assertEqual(statut[0].manque, 1)
 
     def test_having_inutile(self):
         with open('tests/requetes/having_inutile.sql', 'r') as r:
@@ -402,7 +431,9 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/select_solution.sql')
-        self.assertEqual(check_having(sql, solutions), (0, 0, False, True))
+        correct, statut = check_having(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], HavingInutile))
 
     def test_having_sans_gb(self):
         with open('tests/requetes/having_sans_gb.sql', 'r') as r:
@@ -410,4 +441,6 @@ class FunctionalTests(unittest.TestCase):
             stmt = sqlparse.split(stmt)[0]
             sql = parse(stmt)
         solutions = parse_solutions('tests/requetes/having_solution.sql')
-        self.assertEqual(check_having(sql, solutions), (0, 0, True, False))
+        correct, statut = check_having(sql, solutions)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut[0], HavingSansGB))
