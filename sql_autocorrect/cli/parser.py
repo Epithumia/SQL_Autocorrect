@@ -1,11 +1,12 @@
 import argparse
+import pickle
 import sys
-from itertools import islice, filterfalse
+from itertools import filterfalse, islice
 from numbers import Number
-from typing import List, Tuple
+from typing import Tuple, List
 
 import sqlparse
-from moz_sql_parser import parse, format
+from moz_sql_parser import format, parse
 from prettytable import PrettyTable
 from pyparsing import ParseException
 from sqlalchemy import create_engine
@@ -13,7 +14,11 @@ from sqlalchemy.engine import ResultProxy
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-from sql_autocorrect.statut import *
+from sql_autocorrect.models.statut import Statut, MaxLignes, ParseOk, NbLignesDiff, NbColDiff, ResultatsDiff, \
+    AliasManquant, TableEnExces, TableManquante, AliasRepete, TableRepetee, OrderByAbsent, OrderByExces, OrderByManque, \
+    OrderByMalTrie, OrderByDesordre, GroupByInutile, GroupByAbsent, GroupBySansAgregat, GroupByManque, GroupByExces, \
+    HavingSansGB, HavingManquant, HavingInutile, SelectEtoile, SelectDesordre, SelectManque, SelectExces, StatutOk, \
+    ErreurParsing, RequeteOk, RequeteInterrompue
 
 
 def unique_everseen(iterable, key=None):
@@ -630,24 +635,22 @@ def check_run(stmt, conn) -> Tuple[bool, Statut]:
     return correct, statut
 
 
-def parse_requete(args, solutions):
-    engine = create_engine('sqlite:///' + args.db, echo=False)
+def parse_requete(fichier, db, solutions):
+    engine = create_engine('sqlite:///' + db, echo=False)
     # create a configured "Session" class
     bound_session = sessionmaker(bind=engine)
 
     # create a Session
     session = bound_session()
     conn = session.connection()
-    with open(args.f, 'r') as r:
+    statuts: dict = {}
+    with open(fichier, 'r') as r:
         stmt = r.read()
         stmt = sqlparse.split(stmt)[0]
 
-        correct, statut = check_syntax(stmt)
-        # pprint(sql)
+        correct, statuts['syntax'] = check_syntax(stmt)
     if correct:
-        sql = statut.sql
-        score = 0
-        statuts: dict = {}
+        sql = statuts['syntax'].sql
 
         # Analyser le SELECT
         select_correct, statuts['select'] = check_select(sql, solutions)
@@ -684,13 +687,13 @@ def parse_requete(args, solutions):
         # Exécution de la requete
         exe_correct, statuts['execution'] = check_run(stmt, conn)
         correct = correct and exe_correct
-        compare_correct = True
         statut_res = []
         if exe_correct:
             _, r = check_run(stmt, conn)
             rs = statuts['execution'].result_proxy
             statuts['execution'].set_resultat(parse_sql_rs_pretty(rs))
             exe_correct, statut_res = parse_sql_rs_data(r.result_proxy)
+            statuts['parse'] = None
         if not exe_correct:
             statuts['parse'] = statut_res[1]
         else:
@@ -715,82 +718,36 @@ def parse_requete(args, solutions):
                 i += 1
             if all(arr_res is False for arr_res in arr_res_bon):
                 correct = False
-                compare_correct = False
                 statuts['execution'].set_messages(arr_msg)
                 statuts['execution'].set_malus(0.5)
 
-        # Affichage du résultat
-        if args.res and statuts['execution'].resultat is not None:
-            print(statuts['execution'].resultat)
-
-        # Affichage des commentaires
-        if args.c:
-            if correct:
-                print("Pas de remarques sur la requête")
-            else:
-                print("Commentaires sur la requête :")
-                for statut in statuts['select']:
-                    print(statut.message)
-                    score -= statut.malus
-                for statut in statuts['label']:
-                    print(statut.message)
-                    score -= statut.malus
-                for statut in statuts['tables']:
-                    print(statut.message)
-                    score -= statut.malus
-                for statut in statuts['alias']:
-                    print(statut.message)
-                    score -= statut.malus
-                for statut in statuts['where']:
-                    print(statut.message)
-                    score -= statut.malus
-                for statut in statuts['groupby']:
-                    print(statut.message)
-                    score -= statut.malus
-                for statut in statuts['having']:
-                    print(statut.message)
-                    score -= statut.malus
-                for statut in statuts['orderby']:
-                    print(statut.message)
-                    score -= statut.malus
-                if not exe_correct and statuts['parse'] is not None:
-                    print(statuts['parse'].message)
-                    score -= statuts['parse'].malus
-                if not compare_correct:
-                    for m in statuts['execution'].messages:
-                        print(m)
-                    score -= statuts['execution'].malus
-
-    else:
-        print(statut.message)
-        score = -(statut.malus)
-        # Affichage de la note
-    if args.g:
-        print(score)
+    return correct, statuts
 
 
-def parse_args(args):
+def parse_args(argv):
     parser = argparse.ArgumentParser(prog='sql-autocorrect')
     parser.add_argument("-f", type=str, required=True,
                         help="Fichier à analyser", metavar='FICHIER')
     parser.add_argument("-s", type=str, required=True,
                         help="Fichier de solution(s)", metavar='FICHIER')
+    parser.add_argument("-r", type=str, required=True,
+                        help="Fichier dans lequel stocker le résultat", metavar='FICHIER')
     parser.add_argument('-db', type=str, required=True,
                         help="Base sur laquelle exécuter la requête", metavar='BDD')
-    parser.add_argument('-g', default=False, action='store_true',
-                        help="Mode note (défaut : non)")
-    parser.add_argument('-c', default=False, action='store_true',
-                        help="Mode commentaire (défaut : oui)")
-    parser.add_argument('-res', default=False, action="store_true",
-                        help="Affiche le résultat de la requête")
-    args = parser.parse_args(args)
+    args = parser.parse_args(argv)
     return args
+
+
+def save_result(r, correct, statuts):
+    with open(r, 'wb') as f:
+        pickle.dump([correct, statuts], f)
 
 
 def main():
     args = parse_args(sys.argv[1:])
     solutions = parse_solutions(args.s)
-    parse_requete(args, solutions)  # TODO: catch exceptions, score, messages et tout stocker dans un fichier
+    correct, statuts = parse_requete(args.f, args.db, solutions)
+    save_result(args.r, correct, statuts)
 
 
 if __name__ == '__main__':

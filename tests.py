@@ -3,15 +3,16 @@ import unittest
 import sqlparse
 from moz_sql_parser import parse
 
-from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, check_ob, \
-    check_alias_table, check_having, check_syntax
-from sql_autocorrect.statut import *
+from sql_autocorrect.cli.parser import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, \
+    check_ob, check_alias_table, check_having, check_syntax, check_where
+from sql_autocorrect.models.statut import *
 
 
 class FunctionalTests(unittest.TestCase):
     def setUp(self):
         super().setUp()
 
+    # Parser
     def test_select_ok(self):
         with open('tests/requetes/select_ok.sql', 'r') as r:
             stmt = r.read()
@@ -474,3 +475,41 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut, ErreurParsing))
         msg = 'Erreur à la ligne 6, colonne 12 :\n<and J.rang not null>\n            ^'
         self.assertEqual(statut.message, msg)
+
+    def test_check_run(self):
+        assert False
+
+    def test_check_where(self):
+        with open('tests/requetes/having_ok.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+        solutions = parse_solutions('tests/requetes/having_solution.sql')
+        correct, statut = check_where(stmt, solutions)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
+
+    def test_check_parse_args(self):
+        assert False
+
+    def test_check_parse_requete(self):
+        assert False
+
+    def test_compare_sql(self):
+        assert False
+
+    def test_parse_sql_rs_data(self):
+        assert False
+
+    def test_parse_sql_rs_pretty(self):
+        assert False
+
+    # Reader
+    def test_affiche_resultat(self):
+        assert False
+
+    def test_parse_affiche_args(self):
+        assert False
+
+    # Common
+    def test_check_save_load(self):
+        assert False

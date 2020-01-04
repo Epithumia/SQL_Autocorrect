@@ -19,7 +19,7 @@ docs_require = [
 
 setup(
     name='SQL_Autocorrect',
-    version='0.0.1',
+    version='0.0.2',
     packages=['sql_autocorrect'],
     url='',
     license='',
@@ -36,6 +36,7 @@ setup(
     },
     entry_points="""\
     [console_scripts]
-    sql-autocorrect = sql_autocorrect.cli:main
+    sql-autocorrect = sql_autocorrect.cli.parser:main
+    sql-ac-res = sql_autocorrect.cli.reader:affiche_resultat
     """,
 )

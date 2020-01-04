@@ -31,7 +31,8 @@ class RequeteOk(Statut):
         self.malus = 0.0
 
     def set_resultat(self, resultat):
-        self.resultat = resultat
+        self.resultat = str(resultat)
+        self.result_proxy = None
 
     def set_messages(self, messages):
         self.messages = messages
