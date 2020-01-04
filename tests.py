@@ -4,7 +4,7 @@ import sqlparse
 from moz_sql_parser import parse
 
 from sql_autocorrect.cli import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, check_ob, \
-    check_alias_table, check_having
+    check_alias_table, check_having, check_syntax
 from sql_autocorrect.statut import *
 
 
@@ -456,3 +456,21 @@ class FunctionalTests(unittest.TestCase):
         correct, statut = check_having(sql, solutions)
         self.assertEqual(correct, False)
         self.assertTrue(isinstance(statut[0], HavingSansGB))
+
+    def test_syntax_ok(self):
+        with open('tests/requetes/having_ok.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+        correct, statut = check_syntax(stmt)
+        self.assertEqual(correct, True)
+        self.assertTrue(isinstance(statut, StatutOk))
+
+    def test_syntax_error(self):
+        with open('tests/requetes/test_parse_exception.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+        correct, statut = check_syntax(stmt)
+        self.assertEqual(correct, False)
+        self.assertTrue(isinstance(statut, ErreurParsing))
+        msg = 'Erreur à la ligne 6, colonne 12 :\n<and J.rang not null>\n            ^'
+        self.assertEqual(statut.message, msg)

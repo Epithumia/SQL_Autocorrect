@@ -9,6 +9,7 @@ from moz_sql_parser import parse, format
 from prettytable import PrettyTable
 from pyparsing import ParseException
 from sqlalchemy import create_engine
+from sqlalchemy.engine import ResultProxy
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
@@ -16,9 +17,15 @@ from sql_autocorrect.statut import *
 
 
 def unique_everseen(iterable, key=None):
-    "List unique elements, preserving order. Remember all elements ever seen."
-    # unique_everseen('AAAABBBCCDAABBB') --> A B C D
-    # unique_everseen('ABBCcAD', str.lower) --> A B C D
+    """
+    List unique elements, preserving order. Remember all elements ever seen."
+    unique_everseen('AAAABBBCCDAABBB') --> A B C D
+    unique_everseen('ABBCcAD', str.lower) --> A B C D
+
+    :param iterable: elements to iterate
+    :param key: comparison key
+    :return: iterable with unique elements
+    """
     seen = set()
     seen_add = seen.add
     if key is None:
@@ -33,11 +40,12 @@ def unique_everseen(iterable, key=None):
                 yield element
 
 
-def parse_sql_rs(rs, nb_lignes=25):
+def parse_sql_rs_pretty(rs, nb_lignes=25):
     """
     Fonction qui prend un ResultProxy et qui renvoie un tableau PrettyTable avec le résultat de la requête.
 
     :param rs: Résultat (ResultProxy) de la requête
+    :param nb_lignes: Nombre max de lignes à réupérer pour affichage
     :return: Tableau PrettyTable
     """
     sql_res = PrettyTable()
@@ -48,18 +56,33 @@ def parse_sql_rs(rs, nb_lignes=25):
     return sql_res
 
 
-def compare_sql(r1, r2, max_lignes=1000000) -> Tuple[bool, List[Statut]]:
+def parse_sql_rs_data(rs: ResultProxy, max_lignes=1000000) -> Tuple[bool, List[Statut]]:
+    correct = True
+    nb_col = len(rs.keys())
+    data = []
+    statut = []
+    if max_lignes:
+        for row in islice(rs, max_lignes):
+            data.append(row)
+        nb_lignes = len(data)
+        if nb_lignes == max_lignes:
+            correct = False
+            statut.append(MaxLignes())
+        rs.close()
+    else:
+        data = list(rs)
+        nb_lignes = len(data)
+    statut.insert(0, ParseOk(data, nb_col, nb_lignes))
+    return correct, statut
+
+
+def compare_sql(s1, s2) -> Tuple[bool, List[Statut]]:
     correct = True
     statut = []
-    c1 = len(r1.keys())
-    c2 = len(r2.keys())
-    res1 = list(r1)
-    res2 = []
-    for row in islice(r2, max_lignes):
-        res2.append(row)
-    if len(res2) == max_lignes:
-        correct = False
-        statut.append(MaxLignes())
+    c1 = s1.nb_col
+    c2 = s2.nb_col
+    res1 = s1.data[:]
+    res2 = s2.data[:]
     if len(res1) != len(res2):
         correct = False
         statut.append(NbLignesDiff(len(res1), len(res2)))
@@ -69,11 +92,11 @@ def compare_sql(r1, r2, max_lignes=1000000) -> Tuple[bool, List[Statut]]:
     if not correct:
         return correct, statut
     for i in range(len(res1)):
-        s1 = sorted(res1[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
-        s2 = sorted(res2[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
-        if s1 != s2:
-            return False, [ResultatsDiff(s1, s2)]
-    return True, [StatutOk()]
+        rs1 = sorted(res1[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
+        rs2 = sorted(res2[i], key=lambda x: (x is not None, '' if isinstance(x, Number) else type(x).__name__, x))
+        if rs1 != rs2:
+            return False, [ResultatsDiff(rs1, rs2)]
+    return True, []
 
 
 def check_alias_agregat(sql) -> Tuple[bool, List[Statut]]:
@@ -305,6 +328,8 @@ def check_ob(sql, solutions) -> Tuple[bool, List[Statut]]:
                 solutions_ob[i].add((token_val, token.get('sort', 'asc')))
                 i += 1
         s += 1
+    if len(solutions_ob) == 0:
+        return correct, statut
     if 'orderby' not in sql:
         correct = False
         statut.append(OrderByAbsent(len(solutions_ob), 0.5))
@@ -574,8 +599,38 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     return correct, statut
 
 
-def parse_requete(args, solutions):
+def check_syntax(stmt) -> Tuple[bool, Statut]:
+    try:
+        sql = parse(stmt)
+        return True, StatutOk(sql)
+    except ParseException as e:
+        ligne = e.lineno
+        col = e.col
+        return False, ErreurParsing(ligne, col, e.line)
+
+
+def check_run(stmt, conn) -> Tuple[bool, Statut]:
     import threading
+    correct = True
+    seconds = 15
+
+    t = threading.Timer(seconds, conn.connection.interrupt)
+    t.start()
+    try:
+        rs = conn.execute(stmt)
+        statut = RequeteOk(rs)
+    except OperationalError as e:
+        correct = False
+        if str(e.orig) == 'interrupted':
+            statut = RequeteInterrompue()
+        else:
+            t.cancel()
+            raise e
+    t.cancel()
+    return correct, statut
+
+
+def parse_requete(args, solutions):
     engine = create_engine('sqlite:///' + args.db, echo=False)
     # create a configured "Session" class
     bound_session = sessionmaker(bind=engine)
@@ -586,172 +641,132 @@ def parse_requete(args, solutions):
     with open(args.f, 'r') as r:
         stmt = r.read()
         stmt = sqlparse.split(stmt)[0]
-        try:
-            sql = parse(stmt)
-        except ParseException as e:
-            ligne = e.lineno
-            col = e.col
-            message = "Erreur à la ligne " + str(ligne) + ", colonne " + str(col) + " :\n<" + e.line + ">\n"
-            for _ in range(col):
-                message += " "
-            message += "^"
-            raise Exception(message)
-        # pprint(sql)
-        score = 0
 
-        exces_sel, manque_sel, desordre_sel, etoile = check_select(sql, solutions)
-        comm_select = ''
-        if etoile:
-            comm_select = 'Il ne faut pas faire SELECT *, on veut des informations précises.'
-        else:
-            if exces_sel:
-                comm_select += 'Il y a ' + str(exces_sel) + ' colonne(s) en trop.\n'
-            if manque_sel:
-                comm_select += 'Il manque ' + str(manque_sel) + ' colonne(s).\n'
-            if desordre_sel:
-                comm_select += 'Les colonnes sont dans le désordre.'
+        correct, statut = check_syntax(stmt)
+        # pprint(sql)
+    if correct:
+        sql = statut.sql
+        score = 0
+        statuts: dict = {}
+
+        # Analyser le SELECT
+        select_correct, statuts['select'] = check_select(sql, solutions)
+        correct = correct and select_correct
 
         # Vérification des étiquettes dans le SELECT en cas de COUNT/SUM/AVG/MIN/MAX
-        label, score_labels = check_alias_agregat(sql)
-        score += score_labels
+        label_correct, statuts['label'] = check_alias_agregat(sql)
+        correct = correct and label_correct
 
         # Vérification des tables manquantes/en trop
-        exces, manque = check_tables(sql, solutions)
-        score += -0.5 * exces - manque
-        if exces and not manque:
-            comm_tables = "Il y a " + str(exces) + " table(s) en trop."
-        elif manque and not exces:
-            comm_tables = "Il y a " + str(manque) + " table(s) manquantes."
-        elif manque and exces:
-            comm_tables = "Il y a " + str(exces) + " table(s) en trop et " + str(manque) + " table(s) manquantes."
-        else:
-            comm_tables = ''
+        tables_correct, statuts['tables'] = check_tables(sql, solutions)
+        correct = correct and tables_correct
 
-        if check_alias_table(sql) and comm_tables != '':
-            comm_tables += "Il y a soit deux fois la même table sans alias, ou deux fois le même alias"
-        elif check_alias_table(sql):
-            comm_tables = "Il y a soit deux fois la même table sans alias, ou deux fois le même alias"
+        # Vérification des alias de tables
+        alias_tables_correct, statuts['alias'] = check_alias_table(sql)
+        correct = correct and alias_tables_correct
 
         # TODO: Vérification des conditions dans le WHERE
-        comm_where = ''
-        if 'where' in sql.keys():
-            exces_w, manque_w = check_where(sql, solutions)
-            if exces_w and not manque_w:
-                comm_where = "Il y a " + str(exces_w) + " contrainte(s) en trop."
-            elif manque_w and not exces_w:
-                comm_where = "Il y a " + str(manque_w) + " contrainte(s) manquantes."
-            elif manque_w and exces_w:
-                comm_where = "Il y a " + str(exces_w) + " contrainte(s) en trop et " + str(
-                    manque_w) + " contrainte(s) manquantes."
+        where_correct, statuts['where'] = check_where(sql, solutions)
+        correct = correct and where_correct
+
+        # Vérification des colonnes dans le ORDER BY
+        ob_correct, statuts['orderby'] = check_ob(sql, solutions)
+        correct = correct and ob_correct
+
+        # Vérification des colonnes dans le GROUP BY
+        gb_correct, statuts['groupby'] = check_gb(sql, solutions)
+        correct = correct and gb_correct
+
+        # TODO: Vérification des conditions dans le HAVING (partiellement fait)
+        having_correct, statuts['having'] = check_having(sql, solutions)
+        correct = correct and having_correct
+
+        # Exécution de la requete
+        exe_correct, statuts['execution'] = check_run(stmt, conn)
+        correct = correct and exe_correct
+        compare_correct = True
+        statut_res = []
+        if exe_correct:
+            _, r = check_run(stmt, conn)
+            rs = statuts['execution'].result_proxy
+            statuts['execution'].set_resultat(parse_sql_rs_pretty(rs))
+            exe_correct, statut_res = parse_sql_rs_data(r.result_proxy)
+        if not exe_correct:
+            statuts['parse'] = statut_res[1]
+        else:
+            arr_res_bon = []
+            arr_msg = []
+            if isinstance(solutions, list):
+                sol = solutions[0]
             else:
-                comm_where = ''
+                sol = solutions
+            qsol = sol['requete_txt']
+            rsol = [conn.execute(q) for q in qsol]
+            statuts_sol = []
+            for r in rsol:
+                _, statut_sol = parse_sql_rs_data(r)
+                statuts_sol.append(statut_sol[0])
+            i = 1
+            for s in statuts_sol:
+                res_bon, statut = compare_sql(s, statut_res[0])
+                arr_res_bon.append(res_bon)
+                arr_msg.extend(["Solution n°" + str(i)])
+                arr_msg.extend(list(x.message for x in statut))
+                i += 1
+            if all(arr_res is False for arr_res in arr_res_bon):
+                correct = False
+                compare_correct = False
+                statuts['execution'].set_messages(arr_msg)
+                statuts['execution'].set_malus(0.5)
 
-        # TODO: Vérification des colonnes dans le ORDER BY
-        comm_ob = ''
-        exces_ob, manque_ob, sort_ob, desordre_ob = check_ob(sql, solutions)
-        if any(len(x) for x in solutions['orderby']):
-            score_ob = min([len(x) for x in solutions['orderby']])
-        else:
-            score_ob = 0
-        if manque_ob == score_ob and 'orderby' not in sql.keys():
-            comm_ob = "Le ORDER BY est manquant\n"
-            score -= min(score_ob * 0.5, 1)
-        else:
-            malus_ob = 0
-            if exces_ob:
-                comm_ob += "Il y a " + str(exces_ob) + " colonne(s) en trop dans le ORDER BY.\n"
-                malus_ob += exces_ob * 0.25
-            if manque_ob:
-                comm_ob += "Il manque " + str(manque_ob) + " colonne(s) dans le ORDER BY.\n"
-                malus_ob += manque_ob * 0.5
-            if sort_ob:
-                comm_ob += str(sort_ob) + " colonne(s) mal triées dans le ORDER BY.\n"
-                malus_ob += sort_ob * 0.25
-            if desordre_ob:
-                comm_ob += "Les colonnes du ORDER BY ne sont pas dans le bon ordre."
-                malus_ob += 0.25
-            if malus_ob:
-                malus_ob = max(malus_ob, 1)
-            score -= malus_ob
-
-        # TODO: Vérification des colonnes dans le GROUP BY
-        exces_gb, manque_gb, inutile_gb = check_gb(sql, solutions)
-        comm_gb = ''
-        if exces_gb:
-            comm_gb = "Il y a " + str(exces_gb) + " colonne(s) en trop dans le GROUP BY.\n"
-            score -= 1
-        if manque_gb:
-            comm_gb += "Il manque " + str(manque_gb) + " colonne(s) dans le GROUP BY.\n"
-            score -= manque_gb
-        if inutile_gb:
-            comm_gb = "Le GROUP BY est inutile."
-            score -= 1
-
-        # TODO: Vérification des conditions dans le HAVING
-        comm_having = ''
-        exces_having, manque_having, having_sans_gb, having_inutile = check_having(sql, solutions)
-        if having_sans_gb:
-            comm_having = "Erreur : HAVING sans GROUP BY"
-        elif exces_having:
-            comm_having = "Il y a " + str(exces_having) + " condition(s) en trop dans le HAVING"
-            score -= 0.5 * exces_having
-        elif manque_having:
-            comm_having = "Il y a " + str(manque_having) + " condition(s) manquantes dans le HAVING"
-            score -= 1 * exces_having
-        elif having_inutile:
-            comm_having = "Le HAVING est inutile"
-            score -= 1
+        # Affichage du résultat
+        if args.res and statuts['execution'].resultat is not None:
+            print(statuts['execution'].resultat)
 
         # Affichage des commentaires
         if args.c:
-            if score < 0:
-                print("Commentaires sur la requête :")
-                print(comm_select.rstrip()) if comm_select else None
-                print(label.strip()) if label else None
-                print(comm_tables.strip()) if comm_tables else None
-                print(comm_where.strip()) if comm_where else None
-                print(comm_gb.strip()) if comm_gb else None
-                print(comm_having.strip()) if comm_having else None
-                print(comm_ob.strip()) if comm_ob else None
-            else:
+            if correct:
                 print("Pas de remarques sur la requête")
-
-        seconds = 15
-        if isinstance(solutions, list):
-            sol = solutions[0]
-        else:
-            sol = solutions
-        qsol = sol['requete_txt']
-        rsol = [conn.execute(q) for q in qsol]
-        t = threading.Timer(seconds, conn.connection.interrupt)
-        t.start()
-        try:
-            rs = conn.execute(stmt)
-            # Affichage du résultat
-            if args.res:
-                res = parse_sql_rs(rs)
-                print(res)
             else:
-                arr_res_bon = []
-                arr_msg = []
-                for r in rsol:
-                    res_bon, statut = compare_sql(r, rs)
-                    arr_res_bon.append(res_bon)
-                    arr_msg.extend(list(x.message for x in statut))
-                if all(arr_res == False for arr_res in arr_res_bon):
-                    if args.c:
-                        print(arr_msg[0])
-                    score -= 0.5
-        except OperationalError as e:
-            if str(e.orig) == 'interrupted':
-                raise Exception("Requête interrompue car trop longue à s'exécuter.")
-            else:
-                print(e)
-        t.cancel()
+                print("Commentaires sur la requête :")
+                for statut in statuts['select']:
+                    print(statut.message)
+                    score -= statut.malus
+                for statut in statuts['label']:
+                    print(statut.message)
+                    score -= statut.malus
+                for statut in statuts['tables']:
+                    print(statut.message)
+                    score -= statut.malus
+                for statut in statuts['alias']:
+                    print(statut.message)
+                    score -= statut.malus
+                for statut in statuts['where']:
+                    print(statut.message)
+                    score -= statut.malus
+                for statut in statuts['groupby']:
+                    print(statut.message)
+                    score -= statut.malus
+                for statut in statuts['having']:
+                    print(statut.message)
+                    score -= statut.malus
+                for statut in statuts['orderby']:
+                    print(statut.message)
+                    score -= statut.malus
+                if not exe_correct and statuts['parse'] is not None:
+                    print(statuts['parse'].message)
+                    score -= statuts['parse'].malus
+                if not compare_correct:
+                    for m in statuts['execution'].messages:
+                        print(m)
+                    score -= statuts['execution'].malus
 
+    else:
+        print(statut.message)
+        score = -(statut.malus)
         # Affichage de la note
-        if args.g:
-            print(score)
+    if args.g:
+        print(score)
 
 
 def parse_args(args):

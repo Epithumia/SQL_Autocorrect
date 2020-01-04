@@ -9,12 +9,56 @@ class Statut():
         self.code = None
         self.col_name = None
         self.nb_col = None
+        self.sql = None
+        self.result_proxy = None
+        self.resultat = None
+        self.data = None
+        self.messages = []
 
 
 class StatutOk(Statut):
-    def __init__(self):
+    def __init__(self, sql):
         super().__init__()
         self.code = -1
+        self.sql = sql
+
+
+class RequeteOk(Statut):
+    def __init__(self, rs):
+        super().__init__()
+        self.code = -1
+        self.result_proxy = rs
+        self.malus = 0.0
+
+    def set_resultat(self, resultat):
+        self.resultat = resultat
+
+    def set_messages(self, messages):
+        self.messages = messages
+
+    def set_malus(self, malus):
+        self.malus = malus
+
+
+class ParseOk(Statut):
+    def __init__(self, data, nb_col, nb_lignes):
+        super().__init__()
+        self.code = -1
+        self.data = data
+        self.nb_col = nb_col
+        self.nb_lignes = nb_lignes
+        self.too_big = False
+
+    def set_too_big(self):
+        self.too_big = True
+
+
+class RequeteInterrompue(Statut):
+    def __init__(self, malus=5.0):
+        super().__init__()
+        self.code = 26
+        self.malus = malus
+        self.message = "Requête interrompue car trop longue."
 
 
 class MaxLignes(Statut):
@@ -285,3 +329,15 @@ class SelectManque(Statut):
             self.message = "Il y a " + str(manque) + " colonnes manquantes dans le SELECT."
         else:
             self.message = "Il y a " + str(manque) + " colonne manquante dans le SELECT."
+
+
+class ErreurParsing(Statut):
+    def __init__(self, ligne, colonne, code, malus=100):
+        super().__init__()
+        self.code = 25
+        message = "Erreur à la ligne " + str(ligne) + ", colonne " + str(colonne) + " :\n<" + code + ">\n"
+        for _ in range(colonne):
+            message += " "
+        message += "^"
+        self.message = message
+        self.malus = malus
