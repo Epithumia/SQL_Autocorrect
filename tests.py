@@ -14,6 +14,12 @@ class FunctionalTests(unittest.TestCase):
     def setUp(self):
         super().setUp()
 
+    def tearDown(self) -> None:
+        super().tearDown()
+        import os
+        if os.path.exists("tests/temp.sqlac"):
+            os.remove("tests/temp.sqlac")
+
     # Parser
     def test_select_ok(self):
         with open('tests/requetes/select_ok.sql', 'r') as r:
