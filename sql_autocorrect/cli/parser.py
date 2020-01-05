@@ -624,7 +624,7 @@ def check_run(stmt, conn) -> Tuple[bool, Statut]:
     try:
         rs = conn.execute(stmt)
         statut = RequeteOk(rs)
-    except OperationalError as e:
+    except OperationalError as e:  # pragma: nocover
         correct = False
         if str(e.orig) == 'interrupted':
             statut = RequeteInterrompue()
@@ -743,12 +743,12 @@ def save_result(r, correct, statuts):
         pickle.dump([correct, statuts], f)
 
 
-def main():
+def main():  # pragma: nocover
     args = parse_args(sys.argv[1:])
     solutions = parse_solutions(args.s)
     correct, statuts = parse_requete(args.f, args.db, solutions)
     save_result(args.r, correct, statuts)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: nocover
     main()

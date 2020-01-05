@@ -1,6 +1,6 @@
 class Statut():
     def __init__(self):
-        self.message = None
+        self.message = ''
         self.malus = 0.0
         self.exces = None
         self.manque = None
@@ -15,10 +15,40 @@ class Statut():
         self.data = None
         self.messages = []
 
+    def __repr__(self):
+        r = str(type(self)) + '<' + str(self.code) + '> - <' + self.message + '>'
+        if self.malus is not None:
+            r += ' malus<' + str(self.malus) + '>'
+        if self.exces is not None:
+            r += 'exces<' + str(self.exces) + '>'
+        if self.manque is not None:
+            r += 'manque<' + str(self.manque) + '>'
+        if self.attendu is not None:
+            r += 'attendu<' + str(self.attendu) + '>'
+        if self.obtenu is not None:
+            r += 'obtenu<' + str(self.obtenu) + '>'
+        if self.sql is not None:
+            r += 'sql<' + str(self.sql) + '>'
+        if self.data is not None:
+            r += 'data<' + str(self.data) + '>'
+        if len(self.messages):
+            r += 'messages<' + str(self.messages) + '>'
+
+        return r
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        if type(self) is type(other):
+            return str(self) == str(other)
+        return False
+
 
 class StatutOk(Statut):
     def __init__(self, sql):
         super().__init__()
+        self.message = 'OK'
         self.code = -1
         self.sql = sql
 
@@ -49,9 +79,6 @@ class ParseOk(Statut):
         self.nb_col = nb_col
         self.nb_lignes = nb_lignes
         self.too_big = False
-
-    def set_too_big(self):
-        self.too_big = True
 
 
 class RequeteInterrompue(Statut):

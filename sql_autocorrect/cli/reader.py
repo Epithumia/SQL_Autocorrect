@@ -13,9 +13,14 @@ def load_result(r):
         return correct, statuts
 
 
+
 def affiche_resultat():
     args = parse_affiche_args(sys.argv[1:])
     correct, statuts = load_result(args.r)
+    affichage(args, correct, statuts)
+
+
+def affichage(args, correct, statuts):
     score = 0
     if not isinstance(statuts['syntax'], StatutOk):
         print(statuts['syntax'].message)
@@ -60,7 +65,6 @@ def affiche_resultat():
         # Affichage du résultat
         if args.res and statuts['parse'] is None and statuts['execution'].resultat is not None:
             print(statuts['execution'].resultat)
-
     # Affichage de la note
     if score < -100:
         score = -100
@@ -83,4 +87,4 @@ def parse_affiche_args(argv):
 
 
 if __name__ == '__main__':
-    affiche_resultat()
+    affiche_resultat()  # pragma: nocover

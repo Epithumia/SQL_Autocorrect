@@ -106,3 +106,4 @@ venv.bak/
 # PyCharm
 .idea/
 /tests/resultat.sqlac
+/tests/temp.sqlac
