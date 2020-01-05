@@ -13,8 +13,7 @@ def load_result(r):
         return correct, statuts
 
 
-
-def affiche_resultat():
+def affiche_resultat():  # pragma: nocover
     args = parse_affiche_args(sys.argv[1:])
     correct, statuts = load_result(args.r)
     affichage(args, correct, statuts)

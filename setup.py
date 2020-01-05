@@ -4,7 +4,8 @@ requires = [
     'prettytable',
     'sqlparse',
     'moz_sql_parser',
-    'sqlalchemy'
+    'sqlalchemy',
+    'pyparsing'
 ]
 
 tests_require = [
@@ -19,7 +20,7 @@ docs_require = [
 
 setup(
     name='SQL_Autocorrect',
-    version='0.0.2',
+    version='1.0.0',
     packages=['sql_autocorrect'],
     url='',
     license='',
@@ -36,7 +37,8 @@ setup(
     },
     entry_points="""\
     [console_scripts]
-    sql-autocorrect = sql_autocorrect.cli.parser:main
+    sql-ac-parse = sql_autocorrect.cli.parser:main
     sql-ac-res = sql_autocorrect.cli.reader:affiche_resultat
+    sql-ac-grade = sql_autocorrect.cli.grader:calc_grade
     """,
 )
