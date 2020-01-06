@@ -108,7 +108,7 @@ venv.bak/
 /tests/resultat.sqlac
 /tests/temp.sqlac
 /coverage-report.sh
-/sql_autocorrect//.scannerwork/
 /sql_autocorrect/sonar-project.properties
 /tests/requetes/testscratch.sql
 /tests/requetes/testscratchsol.sql
+/sql_autocorrect/.scannerwork/*
