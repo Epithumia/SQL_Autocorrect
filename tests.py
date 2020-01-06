@@ -532,6 +532,12 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut['syntax'], ErreurParsing))
         self.assertEqual(statut['syntax'].message,
                          'Erreur à la ligne 6, colonne 12 :\n<and J.rang not null>\n            ^')
+        fichier = 'tests/requetes/test_requete_vide.sql'
+        solutions = parse_solutions('tests/requetes/test_solution.sql')
+        correct, statut = parse_requete(fichier, db, solutions)
+        self.assertFalse(correct)
+        self.assertTrue(isinstance(statut['syntax'], EmptyQuery))
+        self.assertEqual(statut['syntax'].message, 'Requête vide')
         fichier = 'tests/requetes/test0.sql'
         db = 'tests/bases/bgg_large.db'
         solutions = parse_solutions('tests/requetes/solution0.sql')

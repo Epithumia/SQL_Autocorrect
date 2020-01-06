@@ -369,3 +369,11 @@ class ErreurParsing(Statut):
         message += "^"
         self.message = message
         self.malus = malus
+
+
+class EmptyQuery(Statut):
+    def __init__(self, malus=100):
+        super().__init__()
+        self.code = 27
+        self.message = "Requête vide"
+        self.malus = malus

@@ -18,7 +18,7 @@ from sql_autocorrect.models.statut import Statut, MaxLignes, ParseOk, NbLignesDi
     AliasManquant, TableEnExces, TableManquante, AliasRepete, TableRepetee, OrderByAbsent, OrderByExces, OrderByManque, \
     OrderByMalTrie, OrderByDesordre, GroupByInutile, GroupByAbsent, GroupBySansAgregat, GroupByManque, GroupByExces, \
     HavingSansGB, HavingManquant, HavingInutile, SelectEtoile, SelectDesordre, SelectManque, SelectExces, StatutOk, \
-    ErreurParsing, RequeteOk, RequeteInterrompue
+    ErreurParsing, RequeteOk, RequeteInterrompue, EmptyQuery
 
 
 def unique_everseen(iterable, key=None):
@@ -646,8 +646,12 @@ def parse_requete(fichier, db, solutions):
     statuts: dict = {}
     with open(fichier, 'r') as r:
         stmt = r.read()
-        stmt = sqlparse.split(stmt)[0]
-
+        stmt = sqlparse.split(stmt)#[0]
+        if len(stmt) == 0:
+            correct = False
+            statuts['syntax'] = EmptyQuery()
+            return correct, statuts
+        stmt = stmt[0]
         correct, statuts['syntax'] = check_syntax(stmt)
     if correct:
         sql = statuts['syntax'].sql
