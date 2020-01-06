@@ -10,6 +10,7 @@ from moz_sql_parser import format, parse
 from prettytable import PrettyTable
 from pyparsing import ParseException
 from sqlalchemy import create_engine
+# noinspection PyProtectedMember
 from sqlalchemy.engine import ResultProxy
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
@@ -53,7 +54,7 @@ def parse_sql_rs_pretty(rs, nb_lignes=25):
     Fonction qui prend un ResultProxy et qui renvoie un tableau PrettyTable avec le résultat de la requête.
 
     :param rs: Résultat (ResultProxy) de la requête
-    :param nb_lignes: Nombre max de lignes à réupérer pour affichage
+    :param nb_lignes: Nombre max de lignes à récupérer pour affichage
     :return: Tableau PrettyTable
     """
     sql_res = PrettyTable()

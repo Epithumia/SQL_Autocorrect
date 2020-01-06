@@ -85,7 +85,7 @@ def parse_grade_args(argv):
     parser_b.add_argument("-r", type=str, required=True,
                           help="Fichier de résultat", metavar='FICHIER')
     parser_b.add_argument("-b", type=float, required=True,
-                          help="Barême", metavar='BAREME')
+                          help="Barème", metavar='BAREME')
     args = parser.parse_args(argv)
     return args
 

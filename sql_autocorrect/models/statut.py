@@ -1,4 +1,4 @@
-class Statut():
+class Statut:
     def __init__(self):
         self.message = ''
         self.malus = 0.0
