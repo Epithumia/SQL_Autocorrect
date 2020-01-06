@@ -41,6 +41,8 @@ def grade(r, bareme) -> float:
                 score -= statut.malus
             for statut in statuts['label']:
                 score -= statut.malus
+            for statut in statuts['agregats']:
+                score -= statut.malus
             for statut in statuts['tables']:
                 score -= statut.malus
             for statut in statuts['alias']:

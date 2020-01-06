@@ -37,6 +37,9 @@ def affichage(args, correct, statuts):
                 for statut in statuts['label']:
                     print(statut.message)
                     score -= statut.malus
+                for statut in statuts['agregats']:
+                    print(statut.message)
+                    score -= statut.malus
                 for statut in statuts['tables']:
                     print(statut.message)
                     score -= statut.malus

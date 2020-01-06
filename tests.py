@@ -547,7 +547,7 @@ sql-autocorrect: error: the following arguments are required: -f, -s, -r, -db
 
     def test_check_parse_requete(self):
         from sql_autocorrect.models.statut import StatutOk, MaxLignes, ErreurParsing, EmptyQuery, SelectExces, \
-            AliasManquant, TableEnExces, OrderByExces, OrderByManque, SelectManque, RequeteOk
+            AliasManquant, TableEnExces, OrderByExces, OrderByManque, MauvaisDistinctAgregat, RequeteOk
         fichier = 'tests/requetes/test_mem_limit.sql'
         db = 'tests/bases/bgg_large.db'
         solutions = parse_solutions('tests/requetes/select_solution.sql')
@@ -577,6 +577,7 @@ sql-autocorrect: error: the following arguments are required: -f, -s, -r, -db
         self.assertIsInstance(statut['select'][0], SelectExces)
         self.assertIsInstance(statut['label'][0], AliasManquant)
         self.assertIsInstance(statut['label'][1], AliasManquant)
+        self.assertEqual(len(statut['agregats']), 2)
         self.assertIsInstance(statut['tables'][0], TableEnExces)
         self.assertEqual(len(statut['alias']), 0)
         self.assertEqual(len(statut['where']), 0)
@@ -594,6 +595,7 @@ sql-autocorrect: error: the following arguments are required: -f, -s, -r, -db
         self.assertIsInstance(statut['execution'], RequeteOk)
         self.assertEqual(len(statut['select']), 0)
         self.assertEqual(len(statut['label']), 0)
+        self.assertEqual(len(statut['agregats']), 0)
         self.assertEqual(len(statut['tables']), 0)
         self.assertEqual(len(statut['alias']), 0)
         self.assertEqual(len(statut['where']), 0)
@@ -637,9 +639,9 @@ sql-autocorrect: error: the following arguments are required: -f, -s, -r, -db
         correct, statut = parse_requete(fichier, db, solutions)
         self.assertFalse(correct)
         self.assertIsInstance(statut['syntax'], StatutOk)
-        self.assertIsInstance(statut['select'][0], SelectManque)
-        self.assertIsInstance(statut['select'][1], SelectExces)
+        self.assertEqual(len(statut['select']), 0)
         self.assertEqual(len(statut['label']), 0)
+        self.assertIsInstance(statut['agregats'][0], MauvaisDistinctAgregat)
         self.assertEqual(len(statut['tables']), 0)
         self.assertEqual(len(statut['alias']), 0)
         self.assertEqual(len(statut['where']), 0)
@@ -752,7 +754,7 @@ sql-ac-grade: error: invalid choice: \'test\' (choose from \'multi\', \'mono\')
     def test_mono_grade(self):
         mono_grade('tests/resultats/resultat_diff.sqlac', 2.0)
         out, err = self.capsys.readouterr()
-        self.assertEqual(out, 'Grade :=>>  1.0\n')
+        self.assertEqual(out, 'Grade :=>>  0.5\n')
         mono_grade('tests/resultats/resultat_max_lignes.sqlac', 3.0)
         out, err = self.capsys.readouterr()
         self.assertEqual(out, 'Grade :=>>  0.0\n')
@@ -766,10 +768,10 @@ sql-ac-grade: error: invalid choice: \'test\' (choose from \'multi\', \'mono\')
     def test_multi_grade(self):
         multigrade('tests/resultats/bareme.txt', 'tests/resultats')
         out, err = self.capsys.readouterr()
-        msg = '''Comment :=>> Requête n° 1  :  1.0
+        msg = '''Comment :=>> Requête n° 1  :  0.5
 Comment :=>> Requête n° 2  :  0.0
 Comment :=>> Requête n° 3  :  4.0
 Comment :=>> Requête n° 4  :  0.0
-Grade :=>>  35.714285714285715
+Grade :=>>  32.142857142857146
 '''
         self.assertEqual(out, msg)

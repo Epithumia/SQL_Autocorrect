@@ -20,7 +20,8 @@ from sql_autocorrect.models.statut import (Statut, MaxLignes, ParseOk, NbLignesD
                                            GroupByInutile, GroupByAbsent, GroupBySansAgregat, GroupByManque,
                                            GroupByExces, HavingSansGB, HavingManquant, HavingInutile, SelectEtoile,
                                            SelectDesordre, SelectManque, SelectExces, StatutOk, ErreurParsing,
-                                           RequeteOk, RequeteInterrompue, EmptyQuery)
+                                           RequeteOk, RequeteInterrompue, EmptyQuery, DistinctManquant, DistinctInutile,
+                                           MauvaisAgregat, MauvaiseColAgregat, MauvaisDistinctAgregat)
 
 
 def unique_everseen(iterable, key=None):
@@ -571,19 +572,35 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
         statut.append(SelectEtoile())
         return correct, statut
 
+    # DISTINCT
+    sql_dist = False
+    first_token = sql_select[0]
+    if isinstance(first_token, dict) and 'value' in first_token.keys():
+        first_token = first_token['value']
+    if isinstance(first_token, dict) and 'distinct' in first_token.keys():
+        sql_dist = True
+    sol_dist = []
+    for sol in solutions['select']:
+        first_token = sol[0]
+        if isinstance(first_token, dict) and 'distinct' in first_token.keys():
+            sol_dist.append(True)
+        else:
+            sol_dist.append(False)
+    if not sql_dist and all(d for d in sol_dist):
+        correct = False
+        statut.append(DistinctManquant())
+    elif sql_dist and not any(d for d in sol_dist):
+        correct = False
+        statut.append(DistinctInutile())
+
     # Excès et/ou manque
     exces = 9999
     manque = 9999
-    prop = []
-    for token in sql_select:
-        if isinstance(token, dict):
-            prop.append(str(token['value']).split('.')[-1])
-        else:
-            prop.append(str(token))
+    prop = extract_columns(sql_select)
     for sol in solutions['select']:
-        sol = sorted([str(x).split('.')[-1] for x in sol])
+        prop_sol = extract_columns(sol)
         from collections import Counter
-        c = list((Counter(sol) & Counter(prop)).elements())
+        c = list((Counter(prop_sol) & Counter(prop)).elements())
         manque = min(manque, len(sol) - len(c))
         exces = min(exces, len(prop) - len(c))
 
@@ -591,7 +608,7 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     if not manque and not exces:
         desordre = True
         for sol in solutions['select']:
-            sol = [str(x).split('.')[-1] for x in sol]
+            sol = extract_columns(sol)
             if desordre and len(sol) == len(prop) and all(sol[i] == prop[i] for i in range(len(sol))):
                 desordre = False
         if desordre:
@@ -605,6 +622,27 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     if exces > 0:
         statut.append(SelectExces(exces))
     return correct, statut
+
+
+def extract_columns(tokens):
+    kw = ['count', 'sum', 'avg', 'min', 'max']
+    columns = []
+    for token in tokens:
+        if isinstance(token, dict) and 'value' in token.keys():
+            token = token['value']
+        if isinstance(token, dict):
+            p = token
+            pkw = ''
+            if isinstance(p, dict) and list(p.keys())[0] in kw:
+                pkw = list(p.keys())[0]
+                p = p[pkw]
+                if isinstance(p, dict) and 'distinct' in p.keys():
+                    p = p['distinct']
+            p = pkw + ' ' + str(p).strip('{}\'').split('.')[-1]
+            columns.append(p.lstrip())
+        else:
+            columns.append(str(token).strip('{}\'').split('.')[-1])
+    return columns
 
 
 def check_syntax(stmt) -> Tuple[bool, Statut]:
@@ -638,6 +676,52 @@ def check_run(stmt, conn) -> Tuple[bool, Statut]:
     return correct, statut
 
 
+def extract_ag(tokens):
+    kw = ['count', 'sum', 'avg', 'min', 'max']
+    liste_ag = []
+    if not isinstance(tokens, list):
+        tokens = [tokens]
+    for token in tokens:
+        if isinstance(token, dict) and 'value' in token.keys():
+            token = token['value']
+        if isinstance(token, dict) and any(k in token.keys() for k in kw):
+            ag = list(token.keys())[0]
+            arg = token[ag]
+            if isinstance(arg, dict) and 'distinct' in arg.keys():
+                dis = True
+                col = arg['distinct']
+            else:
+                col = arg
+                dis = False
+            liste_ag.append({'ag': ag, 'col': col, 'dis': dis})
+    return liste_ag
+
+
+def check_agregats(sql, solutions, partie='select') -> Tuple[bool, List[Statut]]:
+    correct = True
+    statuts = []
+    if partie != 'select':
+        partie = 'having'
+    # On ne vérifie que par rapport à la première solution
+    sol = solutions[partie]
+    if isinstance(solutions, dict):
+        sol = solutions[partie][0]
+    ag_sql = extract_ag(sql[partie])
+    ag_sol = extract_ag(sol)
+    nb = min(len(ag_sql), len(ag_sol))
+    for i in range(nb):
+        if ag_sol[i]['ag'] != ag_sql[i]['ag']:
+            correct = False
+            statuts.append(MauvaisAgregat(ag_sql[i]['ag'], ag_sol[i]['ag'], i))
+        elif ag_sol[i]['col'] != ag_sql[i]['col']:
+            correct = False
+            statuts.append(MauvaiseColAgregat(i))
+        elif ag_sol[i]['dis'] != ag_sql[i]['dis']:
+            correct = False
+            statuts.append(MauvaisDistinctAgregat(i, ag_sql[i]['dis']))
+    return correct, statuts
+
+
 def parse_requete(fichier, db, solutions):
     engine = create_engine('sqlite:///' + db, echo=False)
     # create a configured "Session" class
@@ -666,6 +750,10 @@ def parse_requete(fichier, db, solutions):
         # Vérification des étiquettes dans le SELECT en cas de COUNT/SUM/AVG/MIN/MAX
         label_correct, statuts['label'] = check_alias_agregat(sql)
         correct = correct and label_correct
+
+        # Vérification des agrégats
+        agregats_corrects, statuts['agregats'] = check_agregats(sql, solutions)
+        correct = correct and agregats_corrects
 
         # Vérification des tables manquantes/en trop
         tables_correct, statuts['tables'] = check_tables(sql, solutions)

@@ -377,3 +377,46 @@ class EmptyQuery(Statut):
         self.code = 27
         self.message = "Requête vide"
         self.malus = malus
+
+
+class DistinctManquant(Statut):
+    def __init__(self, malus=1):
+        super().__init__()
+        self.code = 28
+        self.message = "DISTINCT manquant."
+        self.malus = malus
+
+
+class DistinctInutile(Statut):
+    def __init__(self, malus=1):
+        super().__init__()
+        self.code = 29
+        self.message = "DISTINCT inutile."
+        self.malus = malus
+
+
+class MauvaisAgregat(Statut):
+    def __init__(self, ag_sql, ag_sol, pos, malus=1):
+        super().__init__()
+        self.code = 30
+        self.message = "Agrégat n°" + str(pos + 1) + " : mauvais agrégat (" + ag_sql + " au lieu de " + ag_sol + ")."
+        self.malus = malus
+
+
+class MauvaiseColAgregat(Statut):
+    def __init__(self, pos, malus=1):
+        super().__init__()
+        self.code = 31
+        self.message = "Agrégat n°" + str(pos + 1) + " : mauvaise colonne."
+        self.malus = malus
+
+
+class MauvaisDistinctAgregat(Statut):
+    def __init__(self, pos, inutile, malus=1):
+        super().__init__()
+        self.code = 32
+        if inutile:
+            self.message = "Agrégat n°" + str(pos + 1) + " : DISTINCT inutile."
+        else:
+            self.message = "Agrégat n°" + str(pos + 1) + " : DISTINCT manquant."
+        self.malus = malus
