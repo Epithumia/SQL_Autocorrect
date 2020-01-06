@@ -5,7 +5,7 @@ requires = [
     'sqlparse',
     'moz_sql_parser',
     'sqlalchemy',
-    'pyparsing'
+    'pyparsing==2.3.1'
 ]
 
 tests_require = [
