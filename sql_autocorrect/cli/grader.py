@@ -11,7 +11,7 @@ def mono_grade(fichier_resultat: str, bareme: float) -> None:
     print("Grade :=>> ", note)
 
 
-def multigrade(fichier_notes: str) -> None:
+def multigrade(fichier_notes: str, chemin: str) -> None:
     with open(fichier_notes, 'r') as f:
         scores = f.readlines()
         scores = [float(s.strip()) for s in scores]
@@ -19,7 +19,7 @@ def multigrade(fichier_notes: str) -> None:
         note = score_total
 
         for i in range(len(scores)):
-            r = 'resultat' + str(i + 1) + '.sqlac'
+            r = chemin + '/resultat' + str(i + 1) + '.sqlac'
             bareme = scores[i]
             score = grade(r, bareme)
             print("Comment :=>> Requête n°", i, " : ", score)
@@ -74,6 +74,8 @@ def parse_grade_args(argv):
     parser_a.set_defaults(func='multi')
     parser_a.add_argument("-f", type=str, required=True,
                           help="Fichier de notes", metavar='FICHIER')
+    parser_a.add_argument("-p", type=str, required=True,
+                          help="Chemin vers les résultats", metavar='CHEMIN')
 
     # create the parser for the "command_2" command
     parser_b = subparsers.add_parser('mono', help='Note un seul résultat')
@@ -94,5 +96,5 @@ def calc_grade():  # pragma: nocover
         mono_grade(args.r, args.b)
 
 
-if __name__ == '__main__':
-    calc_grade()  # pragma: nocover
+if __name__ == '__main__':  # pragma: nocover
+    calc_grade()

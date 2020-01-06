@@ -4,6 +4,7 @@ import pytest
 import sqlparse
 from moz_sql_parser import parse
 
+from sql_autocorrect.cli.grader import parse_grade_args, mono_grade, multigrade
 from sql_autocorrect.cli.parser import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, \
     check_ob, check_alias_table, check_having, check_syntax, check_where, parse_args, parse_requete, save_result
 from sql_autocorrect.cli.reader import parse_affiche_args, affichage, load_result
@@ -624,7 +625,7 @@ class FunctionalTests(unittest.TestCase):
 
     # Reader
     def test_affichage(self):
-        argv = ['-r', 'tests/resultat_parse_exception.sqlac',
+        argv = ['-r', 'tests/resultats/resultat_parse_exception.sqlac',
                 '-g', '-c', '-res']
         args = parse_affiche_args(argv)
         correct, statuts = load_result(args.r)
@@ -632,7 +633,7 @@ class FunctionalTests(unittest.TestCase):
         out, err = self.capsys.readouterr()
         self.assertEqual(out, 'Erreur à la ligne 6, colonne 12 :\n<and J.rang not null>\n            ^\n-100\n')
 
-        argv = ['-r', 'tests/resultat_max_lignes.sqlac',
+        argv = ['-r', 'tests/resultats/resultat_max_lignes.sqlac',
                 '-g', '-c', '-res']
         args = parse_affiche_args(argv)
         correct, statuts = load_result(args.r)
@@ -640,7 +641,7 @@ class FunctionalTests(unittest.TestCase):
         out, err = self.capsys.readouterr()
         self.assertTrue('Le nombre maximum de lignes est atteint' in out)
 
-        argv = ['-r', 'tests/resultat_diff.sqlac',
+        argv = ['-r', 'tests/resultats/resultat_diff.sqlac',
                 '-g', '-c', '-res']
         args = parse_affiche_args(argv)
         correct, statuts = load_result(args.r)
@@ -649,7 +650,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(
             'Les résultats sont différents : [2.0339146936917394, 2019, 84826] <> [2.4521738653748066, 2019, 84826]' in out)
 
-        argv = ['-r', 'tests/resultat_ok.sqlac',
+        argv = ['-r', 'tests/resultats/resultat_ok.sqlac',
                 '-g', '-c', '-res']
         args = parse_affiche_args(argv)
         correct, statuts = load_result(args.r)
@@ -678,7 +679,7 @@ class FunctionalTests(unittest.TestCase):
 
     # Common
     def test_check_save_load(self):
-        argv = ['-r', 'tests/resultat_diff.sqlac']
+        argv = ['-r', 'tests/resultats/resultat_diff.sqlac']
         args = parse_affiche_args(argv)
         correct, statuts = load_result(args.r)
         save_result('tests/temp.sqlac', correct, statuts)
@@ -688,3 +689,47 @@ class FunctionalTests(unittest.TestCase):
         print(hash(statuts['syntax']))
         self.assertEqual(correct, correct2)
         self.assertDictEqual(statuts, statuts2)
+
+    # Grader
+    def test_parse_grade_args(self):
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            argv = ['test']
+            parse_grade_args(argv)
+        self.assertEqual(pytest_wrapped_e.value.code, 2)
+        msg = "usage: sql-ac-grade [-h] {multi,mono} ...\nsql-ac-grade: error: invalid choice: 'test' (choose from 'multi', 'mono')\n"
+        out, err = self.capsys.readouterr()
+        self.assertEqual(err, msg)
+        argv = ['mono', '-r', 'fichier', '-b', '1.5']
+        args = parse_grade_args(argv)
+        self.assertEqual(args.b, 1.5)
+        self.assertEqual(args.func, 'mono')
+        self.assertEqual(args.r, 'fichier')
+        argv = ['multi', '-f', 'fichier', '-p', 'chemin']
+        args = parse_grade_args(argv)
+        self.assertEqual(args.func, 'multi')
+        self.assertEqual(args.f, 'fichier')
+
+    def test_mono_grade(self):
+        mono_grade('tests/resultats/resultat_diff.sqlac', 2.0)
+        out, err = self.capsys.readouterr()
+        self.assertEqual(out, 'Grade :=>>  1.0\n')
+        mono_grade('tests/resultats/resultat_max_lignes.sqlac', 3.0)
+        out, err = self.capsys.readouterr()
+        self.assertEqual(out, 'Grade :=>>  0.0\n')
+        mono_grade('tests/resultats/resultat_ok.sqlac', 4.0)
+        out, err = self.capsys.readouterr()
+        self.assertEqual(out, 'Grade :=>>  4.0\n')
+        mono_grade('tests/resultats/resultat_parse_exception.sqlac', 5.0)
+        out, err = self.capsys.readouterr()
+        self.assertEqual(out, 'Grade :=>>  0.0\n')
+
+    def test_multi_grade(self):
+        multigrade('tests/resultats/bareme.txt', 'tests/resultats')
+        out, err = self.capsys.readouterr()
+        msg = '''Comment :=>> Requête n° 0  :  1.0
+Comment :=>> Requête n° 1  :  3.0
+Comment :=>> Requête n° 2  :  0
+Comment :=>> Requête n° 3  :  5.0
+Grade :=>>  35.714285714285715
+'''
+        self.assertEqual(out, msg)
