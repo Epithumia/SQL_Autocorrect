@@ -91,7 +91,7 @@ def parse_grade_args(argv):
 def calc_grade():  # pragma: nocover
     args = parse_grade_args(sys.argv[1:])
     if args.func == 'multi':
-        multigrade(args.f)
+        multigrade(args.f, args.p)
     else:
         mono_grade(args.r, args.b)
 
