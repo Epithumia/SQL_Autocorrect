@@ -767,9 +767,9 @@ sql-ac-grade: error: invalid choice: \'test\' (choose from \'multi\', \'mono\')
         multigrade('tests/resultats/bareme.txt', 'tests/resultats')
         out, err = self.capsys.readouterr()
         msg = '''Comment :=>> Requête n° 1  :  1.0
-Comment :=>> Requête n° 2  :  3.0
-Comment :=>> Requête n° 3  :  0
-Comment :=>> Requête n° 4  :  5.0
+Comment :=>> Requête n° 2  :  0.0
+Comment :=>> Requête n° 3  :  4.0
+Comment :=>> Requête n° 4  :  0.0
 Grade :=>>  35.714285714285715
 '''
         self.assertEqual(out, msg)
