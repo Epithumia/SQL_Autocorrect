@@ -37,32 +37,38 @@ def grade(r, bareme) -> float:
         score = -statuts['syntax'].malus
     else:
         if not correct:
-            for statut in statuts['select']:
-                score -= statut.malus
-            for statut in statuts['label']:
-                score -= statut.malus
-            for statut in statuts['agregats']:
-                score -= statut.malus
-            for statut in statuts['tables']:
-                score -= statut.malus
-            for statut in statuts['alias']:
-                score -= statut.malus
-            for statut in statuts['where']:
-                score -= statut.malus
-            for statut in statuts['groupby']:
-                score -= statut.malus
-            for statut in statuts['having']:
-                score -= statut.malus
-            for statut in statuts['orderby']:
-                score -= statut.malus
-            if statuts['parse'] is not None:
-                score -= statuts['parse'].malus
-            score -= statuts['execution'].malus
+            score = apply_malus(statuts)
     # Affichage de la note
     score = -score
     if score > bareme:
         score = bareme
 
+    return score
+
+
+def apply_malus(statuts):
+    score = 0
+    for statut in statuts['select']:
+        score -= statut.malus
+    for statut in statuts['label']:
+        score -= statut.malus
+    for statut in statuts['agregats']:
+        score -= statut.malus
+    for statut in statuts['tables']:
+        score -= statut.malus
+    for statut in statuts['alias']:
+        score -= statut.malus
+    for statut in statuts['where']:
+        score -= statut.malus
+    for statut in statuts['groupby']:
+        score -= statut.malus
+    for statut in statuts['having']:
+        score -= statut.malus
+    for statut in statuts['orderby']:
+        score -= statut.malus
+    if statuts['parse'] is not None:
+        score -= statuts['parse'].malus
+    score -= statuts['execution'].malus
     return score
 
 
