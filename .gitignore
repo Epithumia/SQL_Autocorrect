@@ -107,3 +107,6 @@ venv.bak/
 .idea/
 /tests/resultat.sqlac
 /tests/temp.sqlac
+/coverage-report.sh
+/sql_autocorrect//.scannerwork/
+/sql_autocorrect/sonar-project.properties

@@ -14,11 +14,13 @@ from sqlalchemy.engine import ResultProxy
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-from sql_autocorrect.models.statut import Statut, MaxLignes, ParseOk, NbLignesDiff, NbColDiff, ResultatsDiff, \
-    AliasManquant, TableEnExces, TableManquante, AliasRepete, TableRepetee, OrderByAbsent, OrderByExces, OrderByManque, \
-    OrderByMalTrie, OrderByDesordre, GroupByInutile, GroupByAbsent, GroupBySansAgregat, GroupByManque, GroupByExces, \
-    HavingSansGB, HavingManquant, HavingInutile, SelectEtoile, SelectDesordre, SelectManque, SelectExces, StatutOk, \
-    ErreurParsing, RequeteOk, RequeteInterrompue, EmptyQuery
+from sql_autocorrect.models.statut import (Statut, MaxLignes, ParseOk, NbLignesDiff, NbColDiff, ResultatsDiff,
+                                           AliasManquant, TableEnExces, TableManquante, AliasRepete, TableRepetee,
+                                           OrderByAbsent, OrderByExces, OrderByManque, OrderByMalTrie, OrderByDesordre,
+                                           GroupByInutile, GroupByAbsent, GroupBySansAgregat, GroupByManque,
+                                           GroupByExces, HavingSansGB, HavingManquant, HavingInutile, SelectEtoile,
+                                           SelectDesordre, SelectManque, SelectExces, StatutOk, ErreurParsing,
+                                           RequeteOk, RequeteInterrompue, EmptyQuery)
 
 
 def unique_everseen(iterable, key=None):
@@ -259,6 +261,7 @@ def parse_solutions(fichier):
     return solutions
 
 
+# noinspection PyUnusedLocal
 def check_where(sql, solutions) -> Tuple[bool, List[Statut]]:
     correct = True
     statut = []
@@ -646,7 +649,7 @@ def parse_requete(fichier, db, solutions):
     statuts: dict = {}
     with open(fichier, 'r') as r:
         stmt = r.read()
-        stmt = sqlparse.split(stmt)#[0]
+        stmt = sqlparse.split(stmt)
         if len(stmt) == 0:
             correct = False
             statuts['syntax'] = EmptyQuery()

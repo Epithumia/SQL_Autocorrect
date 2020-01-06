@@ -23,7 +23,7 @@ def affichage(args, correct, statuts):
     score = 0
     if not isinstance(statuts['syntax'], StatutOk):
         print(statuts['syntax'].message)
-        score = -(statuts['syntax'].malus)
+        score = -statuts['syntax'].malus
     else:
         # Affichage des commentaires
         if args.c:

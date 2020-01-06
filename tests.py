@@ -8,7 +8,6 @@ from sql_autocorrect.cli.grader import parse_grade_args, mono_grade, multigrade
 from sql_autocorrect.cli.parser import parse_solutions, check_select, check_tables, check_gb, check_alias_agregat, \
     check_ob, check_alias_table, check_having, check_syntax, check_where, parse_args, parse_requete, save_result
 from sql_autocorrect.cli.reader import parse_affiche_args, affichage, load_result
-from sql_autocorrect.models.statut import *
 
 
 class FunctionalTests(unittest.TestCase):
@@ -33,6 +32,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_select_etoile(self):
+        from sql_autocorrect.models.statut import SelectEtoile
         with open('tests/requetes/select_etoile.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -43,6 +43,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut[0], SelectEtoile))
 
     def test_select_exces(self):
+        from sql_autocorrect.models.statut import SelectExces
         with open('tests/requetes/select_exces.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -54,6 +55,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].exces, 1)
 
     def test_select_manque(self):
+        from sql_autocorrect.models.statut import SelectManque
         with open('tests/requetes/select_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -65,6 +67,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].manque, 1)
 
     def test_select_desordre(self):
+        from sql_autocorrect.models.statut import SelectDesordre
         with open('tests/requetes/select_desordre.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -85,6 +88,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_from_exces(self):
+        from sql_autocorrect.models.statut import TableEnExces
         with open('tests/requetes/from_exces.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -96,6 +100,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].exces, 1)
 
     def test_from_manque(self):
+        from sql_autocorrect.models.statut import TableManquante
         with open('tests/requetes/from_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -117,6 +122,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_groupby_seul_exces(self):
+        from sql_autocorrect.models.statut import GroupByExces
         with open('tests/requetes/groupby_seul_exces.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -128,6 +134,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].exces, 1)
 
     def test_groupby_seul_manque(self):
+        from sql_autocorrect.models.statut import GroupByManque
         with open('tests/requetes/groupby_seul_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -139,6 +146,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].manque, 1)
 
     def test_groupby_seul_semi_manque(self):
+        from sql_autocorrect.models.statut import GroupByManque
         with open('tests/requetes/groupby_seul_semi_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -150,6 +158,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].manque, 0.5)
 
     def test_groupby_seul_absent(self):
+        from sql_autocorrect.models.statut import GroupByAbsent
         with open('tests/requetes/groupby_seul_absent.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -171,6 +180,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_groupby_simple_inutile(self):
+        from sql_autocorrect.models.statut import GroupByInutile
         with open('tests/requetes/groupby_simple_inutile.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -191,6 +201,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_groupby_mix_manque(self):
+        from sql_autocorrect.models.statut import GroupByManque
         with open('tests/requetes/groupby_mix_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -202,6 +213,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].manque, 1)
 
     def test_groupby_mix_semi_manque(self):
+        from sql_autocorrect.models.statut import GroupByManque
         with open('tests/requetes/groupby_mix_semi_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -213,6 +225,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].manque, 0.5)
 
     def test_groupby_mix_exces(self):
+        from sql_autocorrect.models.statut import GroupByExces
         with open('tests/requetes/groupby_mix_exces.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -234,6 +247,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_groupby_mix_groupby_inutile(self):
+        from sql_autocorrect.models.statut import GroupBySansAgregat
         with open('tests/requetes/groupby_mix_groupby_inutile.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -244,6 +258,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut[0], GroupBySansAgregat))
 
     def test_groupby_mix_agregat_sans_groupby(self):
+        from sql_autocorrect.models.statut import GroupByAbsent
         with open('tests/requetes/groupby_mix_agregat_select_sans_groupby.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -326,6 +341,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_orderby_manque(self):
+        from sql_autocorrect.models.statut import OrderByAbsent
         with open('tests/requetes/orderby_manque.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -337,6 +353,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].nb_col, 5)
 
     def test_orderby_manque_4(self):
+        from sql_autocorrect.models.statut import OrderByManque
         with open('tests/requetes/orderby_manque_4.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -348,6 +365,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[0].manque, 4)
 
     def test_orderby_err_mixte(self):
+        from sql_autocorrect.models.statut import OrderByExces, OrderByManque, OrderByMalTrie
         with open('tests/requetes/orderby_err_mixte.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -363,6 +381,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(statut[2].nb_col, 2)
 
     def test_orderby_desordre(self):
+        from sql_autocorrect.models.statut import OrderByMalTrie, OrderByDesordre
         with open('tests/requetes/orderby_desordre.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -385,6 +404,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_alias_table_err_alias(self):
+        from sql_autocorrect.models.statut import AliasRepete
         with open('tests/requetes/alias_table_err_alias.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -394,6 +414,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut[0], AliasRepete))
 
     def test_alias_table_err_table(self):
+        from sql_autocorrect.models.statut import TableRepetee
         with open('tests/requetes/alias_table_err_table.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -413,6 +434,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(len(statut), 0)
 
     def test_having_manquant(self):
+        from sql_autocorrect.models.statut import HavingManquant
         with open('tests/requetes/having_manquant.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -448,6 +470,7 @@ class FunctionalTests(unittest.TestCase):
     #     self.assertEqual(statut[0].manque, 1)
 
     def test_having_inutile(self):
+        from sql_autocorrect.models.statut import HavingInutile
         with open('tests/requetes/having_inutile.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -458,6 +481,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut[0], HavingInutile))
 
     def test_having_sans_gb(self):
+        from sql_autocorrect.models.statut import HavingSansGB
         with open('tests/requetes/having_sans_gb.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -468,6 +492,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut[0], HavingSansGB))
 
     def test_syntax_ok(self):
+        from sql_autocorrect.models.statut import StatutOk
         with open('tests/requetes/having_ok.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -476,6 +501,7 @@ class FunctionalTests(unittest.TestCase):
         self.assertTrue(isinstance(statut, StatutOk))
 
     def test_syntax_error(self):
+        from sql_autocorrect.models.statut import ErreurParsing
         with open('tests/requetes/test_parse_exception.sql', 'r') as r:
             stmt = r.read()
             stmt = sqlparse.split(stmt)[0]
@@ -506,7 +532,9 @@ class FunctionalTests(unittest.TestCase):
             argv = ['test']
             parse_args(argv)
         self.assertEqual(pytest_wrapped_e.value.code, 2)
-        msg = 'usage: sql-autocorrect [-h] -f FICHIER -s FICHIER -r FICHIER -db BDD\nsql-autocorrect: error: the following arguments are required: -f, -s, -r, -db\n'
+        msg = '''usage: sql-autocorrect [-h] -f FICHIER -s FICHIER -r FICHIER -db BDD
+sql-autocorrect: error: the following arguments are required: -f, -s, -r, -db
+'''
         out, err = self.capsys.readouterr()
         self.assertEqual(err, msg)
         argv = ['-f', 'tests/requetes/from_ok.sql', '-s', 'tests/requetes/from_ok.sql', '-r', 'tests/resultat.sqlac',
@@ -518,6 +546,8 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(args.db, 'tests/bases/bgg_large.db')
 
     def test_check_parse_requete(self):
+        from sql_autocorrect.models.statut import StatutOk, MaxLignes, ErreurParsing, EmptyQuery, SelectExces, \
+            AliasManquant, TableEnExces, OrderByExces, OrderByManque, SelectManque, RequeteOk
         fichier = 'tests/requetes/test_mem_limit.sql'
         db = 'tests/bases/bgg_large.db'
         solutions = parse_solutions('tests/requetes/select_solution.sql')
@@ -653,8 +683,8 @@ class FunctionalTests(unittest.TestCase):
         correct, statuts = load_result(args.r)
         affichage(args, correct, statuts)
         out, err = self.capsys.readouterr()
-        self.assertTrue(
-            'Les résultats sont différents : [2.0339146936917394, 2019, 84826] <> [2.4521738653748066, 2019, 84826]' in out)
+        msg = 'Les résultats sont différents : [2.0339146936917394, 2019, 84826] <> [2.4521738653748066, 2019, 84826]'
+        self.assertTrue(msg in out)
 
         argv = ['-r', 'tests/resultats/resultat_ok.sqlac',
                 '-g', '-c', '-res']
@@ -672,7 +702,9 @@ class FunctionalTests(unittest.TestCase):
             argv = ['test']
             parse_affiche_args(argv)
         self.assertEqual(pytest_wrapped_e.value.code, 2)
-        msg = 'usage: sql-ac-res [-h] -r FICHIER [-g] [-c] [-res]\nsql-ac-res: error: the following arguments are required: -r\n'
+        msg = '''usage: sql-ac-res [-h] -r FICHIER [-g] [-c] [-res]
+sql-ac-res: error: the following arguments are required: -r
+'''
         out, err = self.capsys.readouterr()
         self.assertEqual(err, msg)
         argv = ['-r', 'tests/resultat.sqlac',
@@ -702,7 +734,9 @@ class FunctionalTests(unittest.TestCase):
             argv = ['test']
             parse_grade_args(argv)
         self.assertEqual(pytest_wrapped_e.value.code, 2)
-        msg = "usage: sql-ac-grade [-h] {multi,mono} ...\nsql-ac-grade: error: invalid choice: 'test' (choose from 'multi', 'mono')\n"
+        msg = '''usage: sql-ac-grade [-h] {multi,mono} ...
+sql-ac-grade: error: invalid choice: \'test\' (choose from \'multi\', \'mono\')
+'''
         out, err = self.capsys.readouterr()
         self.assertEqual(err, msg)
         argv = ['mono', '-r', 'fichier', '-b', '1.5']

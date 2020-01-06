@@ -34,7 +34,7 @@ def grade(r, bareme) -> float:
     correct, statuts = load_result(r)
     score = 0
     if not isinstance(statuts['syntax'], StatutOk):
-        score = -(statuts['syntax'].malus)
+        score = -statuts['syntax'].malus
     else:
         if not correct:
             for statut in statuts['select']:
