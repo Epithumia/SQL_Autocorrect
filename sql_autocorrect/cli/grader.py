@@ -22,7 +22,7 @@ def multigrade(fichier_notes: str, chemin: str) -> None:
             r = chemin + '/resultat' + str(i + 1) + '.sqlac'
             bareme = scores[i]
             score = grade(r, bareme)
-            print("Comment :=>> Requête n°", i, " : ", score)
+            print("Comment :=>> Requête n°", i + 1, " : ", score)
             note -= score
 
         note_finale = 100 * note / score_total

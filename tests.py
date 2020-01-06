@@ -726,10 +726,10 @@ class FunctionalTests(unittest.TestCase):
     def test_multi_grade(self):
         multigrade('tests/resultats/bareme.txt', 'tests/resultats')
         out, err = self.capsys.readouterr()
-        msg = '''Comment :=>> Requête n° 0  :  1.0
-Comment :=>> Requête n° 1  :  3.0
-Comment :=>> Requête n° 2  :  0
-Comment :=>> Requête n° 3  :  5.0
+        msg = '''Comment :=>> Requête n° 1  :  1.0
+Comment :=>> Requête n° 2  :  3.0
+Comment :=>> Requête n° 3  :  0
+Comment :=>> Requête n° 4  :  5.0
 Grade :=>>  35.714285714285715
 '''
         self.assertEqual(out, msg)
