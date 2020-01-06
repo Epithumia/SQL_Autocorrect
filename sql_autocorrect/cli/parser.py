@@ -146,7 +146,7 @@ def check_tables(sql, solutions) -> Tuple[bool, List[Statut]]:
     if not isinstance(sql_from, list):
         sql_from = [sql_from]
     manque = 9999
-    exces = 0
+    exces = 9999
     prop = []
     for token in sql_from:
         if isinstance(token, dict):
@@ -158,7 +158,7 @@ def check_tables(sql, solutions) -> Tuple[bool, List[Statut]]:
         from collections import Counter
         c = list((Counter(sol) & Counter(prop)).elements())
         manque = min(manque, len(sol) - len(c))
-        exces = max(exces, len(prop) - len(c))
+        exces = min(exces, len(prop) - len(c))
         # TODO: vérifier les jointures et donc récupérer ce qui dépasse
     if exces > 0:
         correct = False
@@ -569,7 +569,7 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
         return correct, statut
 
     # Excès et/ou manque
-    exces = 0
+    exces = 9999
     manque = 9999
     prop = []
     for token in sql_select:
@@ -582,7 +582,7 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
         from collections import Counter
         c = list((Counter(sol) & Counter(prop)).elements())
         manque = min(manque, len(sol) - len(c))
-        exces = max(exces, len(prop) - len(c))
+        exces = min(exces, len(prop) - len(c))
 
     # Désordre = toutes les colonnes mais pas dans le bon ordre
     if not manque and not exces:
