@@ -159,7 +159,7 @@ def check_tables(sql, solutions) -> Tuple[bool, List[Statut]]:
                 if isinstance(inner, dict) and 'value' in inner.keys():
                     prop.append(inner['value'].upper())
                 else:
-                    prop.append(inner)
+                    prop.append(inner.upper())
             else:
                 prop.append(token['value'].upper())
         else:
