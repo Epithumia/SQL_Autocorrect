@@ -134,7 +134,7 @@ def check_alias_agregat(sql) -> Tuple[bool, List[Statut]]:
         # return correct, statut
     for item in sql_select:
         for w in kw:
-            if w in item['value'] and 'name' not in item:
+            if isinstance(item['value'], dict) and w in item['value'] and 'name' not in item:
                 correct = False
                 d = format({'select': item['value'][w]})[7:]
                 statut.append(AliasManquant(w, d, m))
@@ -154,7 +154,11 @@ def check_tables(sql, solutions) -> Tuple[bool, List[Statut]]:
     prop = []
     for token in sql_from:
         if isinstance(token, dict):
-            prop.append(token['value'].upper())
+            if 'inner join' in token.keys():
+                inner = token['inner join']
+                prop.append(inner['value'].upper())
+            else:
+                prop.append(token['value'].upper())
         else:
             prop.append(token.upper())
     for sol in tables_solution:
@@ -208,7 +212,11 @@ def parse_solutions(fichier):
                 t = []
                 for table in sol_from:
                     if isinstance(table, dict):
-                        t.append(table['value'])
+                        if 'inner join' in table.keys():
+                            inner = table['inner join']
+                            t.append(inner['value'].upper())
+                        else:
+                            t.append(table['value'])
                     else:
                         t.append(table)
                 if len(t):
@@ -281,7 +289,11 @@ def check_alias_table(sql) -> Tuple[bool, List[Statut]]:
     for token in sql_from:
         if isinstance(token, dict):
             # Vérifier qu'il n'y a pas deux fois le même alias
-            alias = token['name']
+            if 'inner join' in token.keys():
+                inner = token['inner join']
+                alias = inner['name']
+            else:
+                alias = token['name']
             if alias in liste_alias and check_alias:
                 correct = False
                 check_alias = False
@@ -637,8 +649,8 @@ def extract_columns(tokens):
             if isinstance(p, dict) and list(p.keys())[0] in kw:
                 pkw = list(p.keys())[0]
                 p = p[pkw]
-                if isinstance(p, dict) and 'distinct' in p.keys():
-                    p = p['distinct']
+            if isinstance(p, dict) and 'distinct' in p.keys():
+                p = p['distinct']
             p = pkw + ' ' + str(p).strip('{}\'').split('.')[-1]
             columns.append(p.lstrip())
         else:
