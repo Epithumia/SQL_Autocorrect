@@ -156,7 +156,10 @@ def check_tables(sql, solutions) -> Tuple[bool, List[Statut]]:
         if isinstance(token, dict):
             if 'inner join' in token.keys():
                 inner = token['inner join']
-                prop.append(inner['value'].upper())
+                if isinstance(inner, dict) and 'value' in inner.keys():
+                    prop.append(inner['value'].upper())
+                else:
+                    prop.append(inner)
             else:
                 prop.append(token['value'].upper())
         else:
@@ -214,7 +217,10 @@ def parse_solutions(fichier):
                     if isinstance(table, dict):
                         if 'inner join' in table.keys():
                             inner = table['inner join']
-                            t.append(inner['value'].upper())
+                            if isinstance(inner, dict) and 'value' in inner.keys():
+                                t.append(inner['value'].upper())
+                            else:
+                                t.append(inner)
                         else:
                             t.append(table['value'])
                     else:
@@ -291,7 +297,10 @@ def check_alias_table(sql) -> Tuple[bool, List[Statut]]:
             # Vérifier qu'il n'y a pas deux fois le même alias
             if 'inner join' in token.keys():
                 inner = token['inner join']
-                alias = inner['name']
+                if isinstance(inner, dict) and 'name' in inner.keys():
+                    alias = inner['name']
+                else:
+                    alias = inner
             else:
                 alias = token['name']
             if alias in liste_alias and check_alias:
