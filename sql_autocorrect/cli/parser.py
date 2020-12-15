@@ -8,7 +8,7 @@ from typing import Tuple, List
 import sqlparse
 from moz_sql_parser import format, parse
 from prettytable import PrettyTable
-from pyparsing import ParseException
+from mo_parsing.exceptions import ParseException
 from sqlalchemy import create_engine
 # noinspection PyProtectedMember
 from sqlalchemy.engine import ResultProxy
@@ -651,6 +651,8 @@ def extract_columns(tokens):
                 p = p[pkw]
             if isinstance(p, dict) and 'distinct' in p.keys():
                 p = p['distinct']
+            if isinstance(p, dict) and 'value' in p.keys():
+                p = p['value']
             p = pkw + ' ' + str(p).strip('{}\'').split('.')[-1]
             columns.append(p.lstrip())
         else:
@@ -702,7 +704,7 @@ def extract_ag(tokens):
             arg = token[ag]
             if isinstance(arg, dict) and 'distinct' in arg.keys():
                 dis = True
-                col = arg['distinct']
+                col = arg['distinct']['value']
             else:
                 col = arg
                 dis = False
