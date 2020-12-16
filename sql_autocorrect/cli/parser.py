@@ -620,7 +620,9 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     manque = 9999
     if isinstance(sql_select[0], dict) and 'value' in sql_select[0].keys() and \
         isinstance(sql_select[0]['value'], dict) and 'distinct' in sql_select[0]['value'].keys():
-        sql_select = sql_select[0]['value']
+        sql_select = sql_select[0]['value']['distinct']
+        if not isinstance(sql_select, list):
+            sql_select = [sql_select]
     prop = extract_columns(sql_select)
     for sol in solutions['select']:
         if isinstance(sol[0], dict) and 'distinct' in sol[0].keys():
