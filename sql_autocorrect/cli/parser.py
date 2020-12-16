@@ -627,6 +627,8 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     for sol in solutions['select']:
         if isinstance(sol[0], dict) and 'distinct' in sol[0].keys():
             sol = sol[0]['distinct']
+        if not isinstance(sol, list):
+            sol = [sol]
         prop_sol = extract_columns(sol)
         from collections import Counter
         c = list((Counter(prop_sol) & Counter(prop)).elements())
@@ -639,6 +641,8 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
         for sol in solutions['select']:
             if isinstance(sol[0], dict) and 'distinct' in sol[0].keys():
                 sol = sol[0]['distinct']
+            if not isinstance(sol, list):
+                sol = [sol]
             sol = extract_columns(sol)
             if desordre and len(sol) == len(prop) and all(sol[i] == prop[i] for i in range(len(sol))):
                 desordre = False
