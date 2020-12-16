@@ -618,6 +618,9 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
     # Excès et/ou manque
     exces = 9999
     manque = 9999
+    if isinstance(sql_select[0], dict) and 'value' in sql_select[0].keys() and \
+        isinstance(sql_select[0]['value'], dict) and 'distinct' in sql_select[0]['value'].keys():
+        sql_select = sql_select[0]['value']['distinct']
     prop = extract_columns(sql_select)
     for sol in solutions['select']:
         prop_sol = extract_columns(sol)
