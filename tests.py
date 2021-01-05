@@ -403,6 +403,15 @@ class FunctionalTests(unittest.TestCase):
         self.assertEqual(correct, True)
         self.assertEqual(len(statut), 0)
 
+    def test_alias_table_seule_ok(self):
+        with open('tests/requetes/alias_table_seule_ok.sql', 'r') as r:
+            stmt = r.read()
+            stmt = sqlparse.split(stmt)[0]
+            sql = parse(stmt)
+        correct, statut = check_alias_table(sql)
+        self.assertEqual(correct, True)
+        self.assertEqual(len(statut), 0)
+
     def test_alias_table_err_alias(self):
         from sql_autocorrect.models.statut import AliasRepete
         with open('tests/requetes/alias_table_err_alias.sql', 'r') as r:

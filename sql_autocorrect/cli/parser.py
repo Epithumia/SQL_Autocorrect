@@ -286,6 +286,8 @@ def check_where(sql, solutions) -> Tuple[bool, List[Statut]]:
 
 def check_alias_table(sql) -> Tuple[bool, List[Statut]]:
     sql_from = sql['from']
+    if not isinstance(sql_from, list):
+        sql_from = [sql_from]
     liste_noms = []
     liste_alias = []
     correct = True
