@@ -1,3 +1,3 @@
-SELECT AnneePublicationJeu, COUNT(*) AS NbJeux
+SELECT anneePublicationJeu, COUNT(*) AS NbJeux
 FROM Jeu
-GROUP BY AnneePublicationJeu;
+GROUP BY anneePublicationJeu;

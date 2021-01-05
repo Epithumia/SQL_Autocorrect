@@ -519,15 +519,15 @@ def exces_manque_gb(agregats, solutions, sql, sql_select) -> Tuple[bool, List[St
     prop_gb = []
     for token in sql_gb:
         if isinstance(token, dict):
-            prop_gb.append(str(token['value'].split('.')[-1]))
+            prop_gb.append(str(token['value'].split('.')[-1]).lower())
         else:
-            prop_gb.append(str(token))
+            prop_gb.append(str(token).lower())
     for sol in solutions:
         if not isinstance(sol['groupby'], list):
             sol_gb = [sol['groupby']]
         else:
             sol_gb = sol['groupby']
-        sol_s = sorted([str(x['value'].split('.')[-1]) for x in sol_gb if sol])
+        sol_s = sorted([str(x['value'].split('.')[-1]).lower() for x in sol_gb if sol])
         from collections import Counter
         c = list((Counter(sol_s) & Counter(prop_gb)).elements())
         manque = min(manque, len(sol_s) - len(c))
@@ -537,9 +537,9 @@ def exces_manque_gb(agregats, solutions, sql, sql_select) -> Tuple[bool, List[St
         for token in sql_select:
             if isinstance(token, dict):
                 if not any(isinstance(token['value'], dict) and ag in token['value'].keys() for ag in agregats):
-                    prop_select.append(str(token['value']))
+                    prop_select.append(str(token['value']).lower())
             else:
-                prop_select.append(str(token))
+                prop_select.append(str(token).lower())
         if all(token in prop_gb for token in prop_select):
             # Il manque probablement juste un identifiant dans le GB pour couvrir contre les homonymes
             manque = manque / 2.0
@@ -676,9 +676,9 @@ def extract_columns(tokens):
             if isinstance(p, dict) and 'value' in p.keys():
                 p = p['value']
             p = pkw + ' ' + str(p).strip('{}\'').split('.')[-1]
-            columns.append(p.lstrip())
+            columns.append(p.lstrip().lower())
         else:
-            columns.append(str(token).strip('{}\'').split('.')[-1])
+            columns.append(str(token).lower().strip('{}\'').split('.')[-1])
     return columns
 
 
