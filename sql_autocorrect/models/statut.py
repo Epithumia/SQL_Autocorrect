@@ -250,9 +250,9 @@ class GroupByExces(Statut):
         self.exces = exces
         self.malus = malus * exces
         if exces > 1:
-            self.message = "Il manque " + str(exces) + " colonnes dans le GROUP BY."
+            self.message = "Il y a " + str(exces) + " colonnes en trop dans le GROUP BY."
         else:
-            self.message = "Il manque " + str(exces) + " colonne dans le GROUP BY."
+            self.message = "Il y a " + str(exces) + " colonne en trop dans le GROUP BY."
 
 
 class HavingManquant(Statut):
