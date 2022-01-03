@@ -21,7 +21,10 @@ def multigrade(fichier_notes: str, chemin: str) -> None:
         for i in range(len(scores)):
             r = chemin + '/resultat' + str(i + 1) + '.sqlac'
             bareme = scores[i]
-            score = grade(r, bareme)
+            try:
+                score = grade(r, bareme)
+            except FileNotFoundError:
+                score = bareme
             print("Comment :=>> Requête n°", i + 1, " : ", bareme - score)
             note -= score
 
