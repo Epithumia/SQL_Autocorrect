@@ -658,7 +658,7 @@ sql-autocorrect: error: the following arguments are required: -f, -s, -r, -db
         self.assertEqual(len(statut['having']), 0)
         self.assertEqual(len(statut['orderby']), 0)
         self.assertIsInstance(statut['execution'], RequeteOk)
-        msg = 'Les résultats sont différents : [2.0339146936917394, 2019, 84826] <> [2.4521738653748066, 2019, 84826]'
+        msg = 'Les résultats sont différents : [2.0339146936917394, 1986, 84826] <> [2.4521738653748066, 1986, 84826]'
         self.assertEqual(statut['execution'].messages[1], msg)
 
     def test_compare_sql(self):
