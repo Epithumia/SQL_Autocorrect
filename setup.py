@@ -9,8 +9,9 @@ requires = [
 ]
 
 tests_require = [
-    'pytest<5',  # includes virtualenv
-    'pytest-cov'
+    'pytest',
+    'pytest-cov',
+    'pytest-xdist'
 ]
 
 docs_require = [

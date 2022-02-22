@@ -746,7 +746,7 @@ sql-ac-res: error: the following arguments are required: -r
             parse_grade_args(argv)
         self.assertEqual(pytest_wrapped_e.value.code, 2)
         msg = '''usage: sql-ac-grade [-h] {multi,mono} ...
-sql-ac-grade: error: invalid choice: \'test\' (choose from \'multi\', \'mono\')
+sql-ac-grade: error: argument {multi,mono}: invalid choice: \'test\' (choose from \'multi\', \'mono\')
 '''
         out, err = self.capsys.readouterr()
         self.assertEqual(err, msg)
