@@ -19,6 +19,11 @@ def affiche_resultat():  # pragma: nocover
     affichage(args, correct, statuts)
 
 
+def cprint(msg, c):
+    if c:
+        print(msg)
+
+
 def affichage(args, correct, statuts):
     score = 0
     if not isinstance(statuts['syntax'], StatutOk):
@@ -26,43 +31,43 @@ def affichage(args, correct, statuts):
         score = -statuts['syntax'].malus
     else:
         # Affichage des commentaires
-        if args.c:
+        if args.c or args.g:
             if correct:
-                print("Pas de remarques sur la requête")
+                cprint("Pas de remarques sur la requête", args.c)
             else:
-                print("Commentaires sur la requête :")
+                cprint("Commentaires sur la requête :", args.c)
                 for statut in statuts['select']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['label']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['agregats']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['tables']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['alias']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['where']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['groupby']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['having']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 for statut in statuts['orderby']:
-                    print(statut.message)
+                    cprint(statut.message, args.c)
                     score -= statut.malus
                 if statuts['parse'] is not None:
-                    print(statuts['parse'].message)
+                    cprint(statuts['parse'].message, args.c)
                     score -= statuts['parse'].malus
                 for m in statuts['execution'].messages:
-                    print(m)
+                    cprint(m, args.c)
                 score -= statuts['execution'].malus
         # Affichage du résultat
         if args.res and statuts['parse'] is None and statuts['execution'].resultat is not None:
