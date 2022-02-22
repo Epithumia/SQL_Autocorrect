@@ -637,7 +637,7 @@ def check_select(sql, solutions) -> Tuple[bool, List[Statut]]:
         manque = min(manque, len(sol) - len(c))
         exces = min(exces, len(prop) - len(c))
 
-    # Désordre = toutes les colonnes mais pas dans le bon ordre
+    # Désordre = toutes les colonnes, mais pas dans le bon ordre
     if not manque and not exces:
         desordre = True
         for sol in solutions['select']:
@@ -818,7 +818,7 @@ def parse_requete(fichier, db, solutions):
         having_correct, statuts['having'] = check_having(sql, solutions)
         correct = correct and having_correct
 
-        # Exécution de la requete
+        # Exécution de la requête
         exe_correct, statuts['execution'] = check_run(stmt, conn)
         correct = correct and exe_correct
         statut_res = []
