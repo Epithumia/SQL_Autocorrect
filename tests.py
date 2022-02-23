@@ -541,8 +541,8 @@ class FunctionalTests(unittest.TestCase):
             argv = ['test']
             parse_args(argv)
         self.assertEqual(pytest_wrapped_e.value.code, 2)
-        msg = '''usage: sql-autocorrect [-h] -f FICHIER -s FICHIER -r FICHIER -db BDD
-sql-autocorrect: error: the following arguments are required: -f, -s, -r, -db
+        msg = '''usage: sql-ac-parse [-h] -f FICHIER -s FICHIER -r FICHIER -db BDD
+sql-ac-parse: error: the following arguments are required: -f, -s, -r, -db
 '''
         out, err = self.capsys.readouterr()
         self.assertEqual(err, msg)
