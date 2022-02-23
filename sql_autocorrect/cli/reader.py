@@ -85,7 +85,7 @@ def parse_affiche_args(argv):
                         help="Fichier de résultat", metavar='FICHIER')
     parser.add_argument('-g', default=False, action='store_true',
                         help="Mode note (défaut : non)")
-    parser.add_argument('-c', default=False, action='store_true',
+    parser.add_argument('-c', default=True, action='store_true',
                         help="Mode commentaire (défaut : oui)")
     parser.add_argument('-res', default=False, action="store_true",
                         help="Affiche le résultat de la requête")
