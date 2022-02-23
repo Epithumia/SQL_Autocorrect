@@ -859,13 +859,13 @@ def parse_requete(fichier, db, solutions):
 
 
 def parse_args(argv):
-    parser = argparse.ArgumentParser(prog='sql-autocorrect')
+    parser = argparse.ArgumentParser(prog='sql-ac-parse')
     parser.add_argument("-f", type=str, required=True,
                         help="Fichier à analyser", metavar='FICHIER')
     parser.add_argument("-s", type=str, required=True,
                         help="Fichier de solution(s)", metavar='FICHIER')
-    parser.add_argument("-r", type=str, required=True,
-                        help="Fichier dans lequel stocker le résultat", metavar='FICHIER')
+    parser.add_argument("-r", type=str, required=True, default="resultat.sqlac",
+                        help="Fichier dans lequel stocker le résultat (par défaut : res.sqlac)", metavar='FICHIER')
     parser.add_argument('-db', type=str, required=True,
                         help="Base sur laquelle exécuter la requête", metavar='BDD')
     args = parser.parse_args(argv)
