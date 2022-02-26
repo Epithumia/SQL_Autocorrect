@@ -32,7 +32,7 @@ sql-ac-parse [-h] -f FICHIER -s FICHIER -r FICHIER -db BDD
 ### Arguments et options
 
 ```shell
-  -h, --help  Message d'aide
+  -h, --help  Affiche cette aide
   -f FICHIER  Fichier à analyser
   -s FICHIER  Fichier de solution(s)
   -r FICHIER  Fichier dans lequel stocker le résultat [par défaut : resultat.sqlac]
@@ -76,14 +76,14 @@ sql-ac-res [-h] -r FICHIER [-g] [-c] [-res]
 ### Arguments et options
 
 ```shell
-  -h, --help  Message d'aide
+  -h, --help  Affiche cette aide
   -r FICHIER  Fichier de résultat
   -g          Mode note
   -c          Mode commentaire
   -res        Affiche le résultat de la requête
 ```
 
-Le fichier attendu est un fichier de résultat généré par `sql-ac-res`.
+Le fichier attendu est un fichier de résultat généré par `sql-ac-parse`.
 
 Le mode note (`-g`) calcule un score (une pénalité, en fait) qui peut être ensuite exploitée pour de la notation automatique.
 
@@ -110,7 +110,7 @@ sql-ac-grade multi [-h] -f FICHIER -p CHEMIN
 ### Arguments et options
 
 ```shell
-  {multi,mono}  aide pour chaque commande
+  {multi,mono}  Aide pour chaque commande
     multi       Note plusieurs résultats automatiquement
     mono        Note un seul résultat
 
