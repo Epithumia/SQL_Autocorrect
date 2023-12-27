@@ -1020,14 +1020,47 @@ def parse_select(query):
 
 
 def parse_from(query):
-    query_from = query["from"]
-    print("FROM")
-    for part in query_from:
-        print(part)
+    tables = []
+    joins = []
+    queue = [part for part in query["from"]]
+
+    while len(queue) > 0:
+        part = queue.pop(0)
+        rel = part["relation"]
+        if "Table" in rel:
+            t = rel["Table"]
+            name = t["name"][0]["value"]
+            alias = t["alias"]
+            if alias is not None:
+                alias = alias["name"]["value"]
+            tables.append({"name": name, "alias": alias})
+            for j in part.get("joins", []):
+                queue.append(j)
+            if "join_operator" in part:
+                joins.append(part["join_operator"])
+    
+    return tables, joins
+
+def parse_order_by(query):
+    order_by = []
+    for col in query:
+        column = col["expr"]
+        if "Identifier" in column:
+            c = {"value": column["Identifier"]["value"]}
+            c["asc"] = True if col["asc"] is None or col["asc"] else False
+        if "Value" in column:
+            c = {"value": column["Value"]["Number"][0]}
+            c["asc"] = True if col["asc"] is None or col["asc"] else False
+        if "BinaryOp" in column:
+            blank = blank_ast.copy()
+            blank[0]["Query"]["body"]["Select"]["projection"] = [{"UnnamedExpr" : column}]
+            c = {"value": restore_ast(blank)[0][7:]}
+            c["asc"] = True if col["asc"] is None or col["asc"] else False
+        order_by.append(c)
+    return order_by
 
 def parse_solutions(fichier):
     solutions = []
-    # print(parse_sql("SELECT 1", dialect="ansi"))
     with open(fichier, "r") as f:
         sol_sql = f.read()
         parsed = parse_sql(sol_sql, dialect="sqlite")
@@ -1043,7 +1076,16 @@ def parse_solutions(fichier):
             solution["select"] = parse_select(query)
             
             # Tables du FROM
-            solution["from"] = parse_from(query)
+            solution["from"], solution["joins"] = parse_from(query)
+
+            # WHERE
+
+            # GROUP BY
+
+            # HAVING
+
+            # ORDER BY
+            solution["order by"] = parse_order_by(sol["Query"]["order_by"])
             
             # Add to solutions
             solutions.append(solution)
