@@ -1,6 +1,6 @@
 class Statut:
     def __init__(self):
-        self.message = ''
+        self.message = ""
         self.malus = 0.0
         self.exces = None
         self.manque = None
@@ -15,23 +15,23 @@ class Statut:
         self.messages = []
 
     def __repr__(self):
-        r = str(type(self)) + ' - <' + self.message + '>'
+        r = str(type(self)) + " - <" + self.message + ">"
         if self.malus is not None:
-            r += ' malus<' + str(self.malus) + '>'
+            r += " malus<" + str(self.malus) + ">"
         if self.exces is not None:
-            r += 'exces<' + str(self.exces) + '>'
+            r += "exces<" + str(self.exces) + ">"
         if self.manque is not None:
-            r += 'manque<' + str(self.manque) + '>'
+            r += "manque<" + str(self.manque) + ">"
         if self.attendu is not None:
-            r += 'attendu<' + str(self.attendu) + '>'
+            r += "attendu<" + str(self.attendu) + ">"
         if self.obtenu is not None:
-            r += 'obtenu<' + str(self.obtenu) + '>'
+            r += "obtenu<" + str(self.obtenu) + ">"
         if self.sql is not None:
-            r += 'sql<' + str(self.sql) + '>'
+            r += "sql<" + str(self.sql) + ">"
         if self.data is not None:
-            r += 'data<' + str(self.data) + '>'
+            r += "data<" + str(self.data) + ">"
         if len(self.messages):
-            r += 'messages<' + str(self.messages) + '>'
+            r += "messages<" + str(self.messages) + ">"
 
         return r
 
@@ -47,7 +47,7 @@ class Statut:
 class StatutOk(Statut):
     def __init__(self, sql):
         super().__init__()
-        self.message = 'OK'
+        self.message = "OK"
         self.sql = sql
 
 
@@ -96,7 +96,13 @@ class NbColDiff(Statut):
         super().__init__()
         self.attendu = attendu
         self.obtenu = obtenu
-        self.message = "Mauvais nombre de colonnes (attendu : " + str(attendu) + ", obtenu : " + str(obtenu) + ")"
+        self.message = (
+            "Mauvais nombre de colonnes (attendu : "
+            + str(attendu)
+            + ", obtenu : "
+            + str(obtenu)
+            + ")"
+        )
         self.malus = malus
 
 
@@ -105,7 +111,13 @@ class NbLignesDiff(Statut):
         super().__init__()
         self.attendu = attendu
         self.obtenu = obtenu
-        self.message = "Mauvais nombre de lignes (attendu : " + str(attendu) + ", obtenu : " + str(obtenu) + ")"
+        self.message = (
+            "Mauvais nombre de lignes (attendu : "
+            + str(attendu)
+            + ", obtenu : "
+            + str(obtenu)
+            + ")"
+        )
         self.malus = malus
 
 
@@ -114,7 +126,9 @@ class ResultatsDiff(Statut):
         super().__init__()
         self.attendu = attendu
         self.obtenu = obtenu
-        self.message = "Les résultats sont différents : " + str(attendu) + " <> " + str(obtenu)
+        self.message = (
+            "Les résultats sont différents : " + str(attendu) + " <> " + str(obtenu)
+        )
         self.malus = malus
 
 
@@ -123,7 +137,7 @@ class AliasManquant(Statut):
         super().__init__()
         self.ag = ag.upper()
         self.col_name = col_name
-        self.message = self.ag + '(' + col_name + ') : mettez un alias'
+        self.message = self.ag + "(" + col_name + ") : mettez un alias"
         self.malus = malus
 
 
@@ -177,7 +191,9 @@ class OrderByExces(Statut):
         self.exces = exces
         self.malus = malus
         if exces > 1:
-            self.message = "Il y a " + str(exces) + " colonnes de trop dans le ORDER BY."
+            self.message = (
+                "Il y a " + str(exces) + " colonnes de trop dans le ORDER BY."
+            )
         else:
             self.message = "Il y a " + str(exces) + " colonne de trop dans le ORDER BY."
 
@@ -188,9 +204,13 @@ class OrderByManque(Statut):
         self.manque = manque
         self.malus = malus * manque
         if manque > 1:
-            self.message = "Il y a " + str(manque) + " colonnes manquantes dans le ORDER BY."
+            self.message = (
+                "Il y a " + str(manque) + " colonnes manquantes dans le ORDER BY."
+            )
         else:
-            self.message = "Il y a " + str(manque) + " colonne manquante dans le ORDER BY."
+            self.message = (
+                "Il y a " + str(manque) + " colonne manquante dans le ORDER BY."
+            )
 
 
 class OrderByMalTrie(Statut):
@@ -199,9 +219,17 @@ class OrderByMalTrie(Statut):
         self.nb_col = nb_col
         self.malus = malus * nb_col
         if nb_col > 1:
-            self.message = "Il y a " + str(nb_col) + " colonnes mal triées (DESC/ASC) dans le ORDER BY."
+            self.message = (
+                "Il y a "
+                + str(nb_col)
+                + " colonnes mal triées (DESC/ASC) dans le ORDER BY."
+            )
         else:
-            self.message = "Il y a " + str(nb_col) + " colonne mal triée (DESC/ASC) dans le ORDER BY."
+            self.message = (
+                "Il y a "
+                + str(nb_col)
+                + " colonne mal triée (DESC/ASC) dans le ORDER BY."
+            )
 
 
 class OrderByDesordre(Statut):
@@ -250,7 +278,9 @@ class GroupByExces(Statut):
         self.exces = exces
         self.malus = malus * exces
         if exces > 1:
-            self.message = "Il y a " + str(exces) + " colonnes en trop dans le GROUP BY."
+            self.message = (
+                "Il y a " + str(exces) + " colonnes en trop dans le GROUP BY."
+            )
         else:
             self.message = "Il y a " + str(exces) + " colonne en trop dans le GROUP BY."
 
@@ -272,7 +302,9 @@ class HavingExces(Statut):
         self.exces = exces
         self.malus = malus * exces
         if exces > 1:
-            self.message = "Il y a " + str(exces) + " conditions en trop dans le HAVING."
+            self.message = (
+                "Il y a " + str(exces) + " conditions en trop dans le HAVING."
+            )
         else:
             self.message = "Il y a " + str(exces) + " condition en trop dans le HAVING."
 
@@ -322,15 +354,27 @@ class SelectManque(Statut):
         self.malus = malus * manque
         self.manque = manque
         if manque > 1:
-            self.message = "Il y a " + str(manque) + " colonnes manquantes dans le SELECT."
+            self.message = (
+                "Il y a " + str(manque) + " colonnes manquantes dans le SELECT."
+            )
         else:
-            self.message = "Il y a " + str(manque) + " colonne manquante dans le SELECT."
+            self.message = (
+                "Il y a " + str(manque) + " colonne manquante dans le SELECT."
+            )
 
 
 class ErreurParsing(Statut):
     def __init__(self, ligne, colonne, code, malus=100):
         super().__init__()
-        message = "Erreur à la ligne " + str(ligne) + ", colonne " + str(colonne) + " :\n<" + code + ">\n"
+        message = (
+            "Erreur à la ligne "
+            + str(ligne)
+            + ", colonne "
+            + str(colonne)
+            + " :\n<"
+            + code
+            + ">\n"
+        )
         for _ in range(colonne):
             message += " "
         message += "^"
@@ -362,7 +406,15 @@ class DistinctInutile(Statut):
 class MauvaisAgregat(Statut):
     def __init__(self, ag_sql, ag_sol, pos, malus=1):
         super().__init__()
-        self.message = "Agrégat n°" + str(pos + 1) + " : mauvais agrégat (" + ag_sql + " au lieu de " + ag_sol + ")."
+        self.message = (
+            "Agrégat n°"
+            + str(pos + 1)
+            + " : mauvais agrégat ("
+            + ag_sql
+            + " au lieu de "
+            + ag_sol
+            + ")."
+        )
         self.malus = malus
 
 
