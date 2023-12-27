@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+description = "Logiciel d'aide à la correction des requêtes SQL"
+name = "SQL_Autocorrect"
+authors = [
+    { name = "Rafaël Lopez", email = "rafael.lopez@universite-paris-saclay.fr" },
+]
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["sql"]
+license = { text = "BSD-3-Clause" }
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = ["prettytable", "sqloxide"]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+testing = ["pytest", "pytest-cov", "pytest-xdist"]
+docs = ["sphinx", "sphinx-autobuild"]
+
+[project.scripts]
+sql-ac-parse = "sql_autocorrect.cli.parser:main"
+sql-ac-res = "sql_autocorrect.cli.reader:affiche_resultat"
+sql-ac-grade = "sql_autocorrect.cli.grader:calc_grade"
+
+[tool.setuptools.dynamic]
+version = {attr = "sql_autocorrect.VERSION"}
